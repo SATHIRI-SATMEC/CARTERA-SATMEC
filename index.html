@@ -1275,7 +1275,15 @@ function importParsed(list){
 (function init(){
   if(cfg.url){document.getElementById("cfgUrl").value=cfg.url; loadDemo(); renderAll(); renderVendedores(); sync();}
   else { loadDemo(); setConn(false); renderAll(); renderVendedores(); }
-  if("serviceWorker" in navigator){navigator.serviceWorker.register("service-worker.js").catch(()=>{});}
+  if("serviceWorker" in navigator){
+    const hadController = !!navigator.serviceWorker.controller;
+    navigator.serviceWorker.register("service-worker.js").then(reg=>{ try{reg.update();}catch(e){} }).catch(()=>{});
+    let refreshing=false;
+    navigator.serviceWorker.addEventListener("controllerchange",()=>{
+      if(refreshing || !hadController) return;   // no recargar en la primera instalación
+      refreshing=true; location.reload();
+    });
+  }
 })();
 </script>
 </body>
