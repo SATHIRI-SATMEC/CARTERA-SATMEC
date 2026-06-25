@@ -628,19 +628,21 @@ function renderFacturas(){
     const [tc,tt]=tagMap[f.alerta]||["pend",""];
     const chip=f.empresa==="SATMEC"?'<span class="chip smc">SATMEC</span>':'<span class="chip sat">SATHIRI</span>';
     const extra = f.alerta==="vencida"? `${Math.abs(f.diasVenc)} d vencida` : f.venc&&f.saldo>0? "vence "+fdate(f.venc):"";
+    const emis = f.emis? "emit. "+fdate(f.emis) : "";
+    const meta = `${f.numero} · ${fmt(f.saldo>0?f.saldo:f.total)}${emis?" · "+emis:""}${extra?" · "+extra:""}`;
     const concepto = f.concepto? `<div class="concepto">${f.concepto}</div>` : "";
     if(selMode){
       return `<div class="row sel" onclick="toggleSel(${JSON.stringify(f.numero)},this)">
         <input type="checkbox" class="f_chk" data-num="${f.numero}" onclick="event.stopPropagation();syncSel()">
         <div class="main"><div class="name">${chip} ${f.cliente||"—"}</div>
         ${concepto}
-        <div class="meta num">${f.numero} · ${fmt(f.saldo>0?f.saldo:f.total)} ${extra?"· "+extra:""}</div></div>
+        <div class="meta num">${meta}</div></div>
         <span class="tag ${tc}">${tt}</span></div>`;
     }
     return `<div class="row" onclick='openCobro(${JSON.stringify(f.numero)})'>
       <div class="main"><div class="name">${chip} ${f.cliente||"—"}</div>
       ${concepto}
-      <div class="meta num">${f.numero} · ${fmt(f.saldo>0?f.saldo:f.total)} ${extra?"· "+extra:""}</div></div>
+      <div class="meta num">${meta}</div></div>
       <span class="tag ${tc}">${tt}</span></div>`;
   }).join("") : '<div class="empty">No hay facturas en este filtro.<br>Toca + para registrar una.</div>';
   syncSel();
@@ -765,7 +767,7 @@ function openCobro(numero){
   document.getElementById("modalBody").innerHTML=`
     <div class="row" style="border:0"><div class="main">
       <div class="name">${f.cliente||"—"}</div>
-      <div class="meta">Subtotal ${fmt(c.sub)} · IVA ${fmt(c.iva)} · Total ${fmt(c.total)} · vence ${fdate(c.venc)}</div></div></div>
+      <div class="meta">Emitida ${fdate(c.emis)} · Subtotal ${fmt(c.sub)} · IVA ${fmt(c.iva)} · Total ${fmt(c.total)} · vence ${fdate(c.venc)}</div></div></div>
     ${detalle}
 
     <div class="ret">
