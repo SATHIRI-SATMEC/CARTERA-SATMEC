@@ -179,6 +179,16 @@
   .pgo-cli{font-size:13.5px;font-weight:600;margin-top:2px}
   .pgo-det{font-size:12px;color:var(--muted);margin-top:3px;line-height:1.35}
   .btn.sm{padding:7px;font-size:13px;margin-top:9px}
+  .selrow{display:flex;align-items:center;gap:10px;margin:0 0 10px;flex-wrap:wrap}
+  .selrow .btn.sm{margin-top:0}
+  .selToggle.on,#selToggle.on{background:var(--brand);color:#fff}
+  #selActions{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+  .selall{display:flex;align-items:center;gap:6px;font-size:13px;font-weight:600}
+  .selall input{width:18px;height:18px}
+  .selcount{font-size:12px;color:var(--muted);min-width:18px}
+  .row.sel{cursor:pointer}
+  .row.sel .f_chk{width:20px;height:20px;flex:0 0 auto;margin-right:4px}
+  .row.on{background:#eef4ff}
   .empty{text-align:center;color:var(--muted);padding:38px 16px;font-size:13.5px}
   .detalle{background:#f6f8fb;border:1px solid var(--line);border-radius:11px;padding:10px 12px;margin:8px 0 4px}
   .detalle .dt-h{font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);font-weight:700;margin-bottom:6px}
@@ -263,6 +273,17 @@
       <button data-f="porvencer">Por vencer</button>
       <button data-f="pendientes">Pendientes</button>
       <button data-f="cobradas">Cobradas</button>
+      <button data-f="anuladas">Anuladas</button>
+    </div>
+    <div class="selrow">
+      <button class="btn ghost sm" id="selToggle" style="margin:0" onclick="toggleSelMode()">Seleccionar</button>
+      <div id="selActions" style="display:none">
+        <label class="selall"><input type="checkbox" id="selAllChk" onchange="selAll(this.checked)"> Todas</label>
+        <span id="selCount" class="selcount">0</span>
+        <button class="btn danger sm" style="margin:0" onclick="delSelected()">Eliminar</button>
+        <button class="btn ghost sm" style="margin:0" onclick="anularSelected()">Marcar anulada</button>
+        <button class="btn ghost sm" style="margin:0" onclick="quitarRetSelected()">Quitar retención</button>
+      </div>
     </div>
     <div class="card" style="padding:6px 16px"><div id="facList"></div></div>
   </section>
@@ -499,25 +520,90 @@ function renderComis(){
 let facFilter="todas";
 function renderFacturas(){
   const t=today();
-  let r=rows();
-  if(facFilter==="vencidas") r=r.filter(f=>f.alerta==="vencida");
-  else if(facFilter==="porvencer") r=r.filter(f=>f.alerta==="porvencer");
-  else if(facFilter==="pendientes") r=r.filter(f=>f.saldo>0);
-  else if(facFilter==="cobradas") r=r.filter(f=>f.alerta==="cobrada");
+  let r=DATA.facturas.map(calc);
+  if(facFilter==="anuladas"){ r=r.filter(f=>f.estadoPago==="Anulada"); }
+  else {
+    r=r.filter(f=>f.estadoPago!=="Anulada");
+    if(facFilter==="vencidas") r=r.filter(f=>f.alerta==="vencida");
+    else if(facFilter==="porvencer") r=r.filter(f=>f.alerta==="porvencer");
+    else if(facFilter==="pendientes") r=r.filter(f=>f.saldo>0);
+    else if(facFilter==="cobradas") r=r.filter(f=>f.alerta==="cobrada");
+  }
   r.sort((a,b)=>(a.venc?a.venc:9e15)-(b.venc?b.venc:9e15));
-  const tagMap={vencida:["bad","Vencida"],porvencer:["warn","Por vencer"],dia:["dia","Al día"],cobrada:["ok","Cobrada"],pendiente:["pend","Sin fecha"]};
+  const tagMap={vencida:["bad","Vencida"],porvencer:["warn","Por vencer"],dia:["dia","Al día"],cobrada:["ok","Cobrada"],pendiente:["pend","Sin fecha"],anulada:["pend","Anulada"]};
   const el=document.getElementById("facList");
   el.innerHTML = r.length? r.map(f=>{
     const [tc,tt]=tagMap[f.alerta]||["pend",""];
     const chip=f.empresa==="SATMEC"?'<span class="chip smc">SATMEC</span>':'<span class="chip sat">SATHIRI</span>';
     const extra = f.alerta==="vencida"? `${Math.abs(f.diasVenc)} d vencida` : f.venc&&f.saldo>0? "vence "+fdate(f.venc):"";
     const concepto = f.concepto? `<div class="concepto">${f.concepto}</div>` : "";
+    if(selMode){
+      return `<div class="row sel" onclick="toggleSel(${JSON.stringify(f.numero)},this)">
+        <input type="checkbox" class="f_chk" data-num="${f.numero}" onclick="event.stopPropagation();syncSel()">
+        <div class="main"><div class="name">${chip} ${f.cliente||"—"}</div>
+        ${concepto}
+        <div class="meta num">${f.numero} · ${fmt(f.saldo>0?f.saldo:f.total)} ${extra?"· "+extra:""}</div></div>
+        <span class="tag ${tc}">${tt}</span></div>`;
+    }
     return `<div class="row" onclick='openCobro(${JSON.stringify(f.numero)})'>
       <div class="main"><div class="name">${chip} ${f.cliente||"—"}</div>
       ${concepto}
       <div class="meta num">${f.numero} · ${fmt(f.saldo>0?f.saldo:f.total)} ${extra?"· "+extra:""}</div></div>
       <span class="tag ${tc}">${tt}</span></div>`;
   }).join("") : '<div class="empty">No hay facturas en este filtro.<br>Toca + para registrar una.</div>';
+  syncSel();
+}
+
+// ---------- selección múltiple ----------
+let selMode=false;
+function toggleSelMode(){
+  selMode=!selMode;
+  document.getElementById("selToggle").textContent = selMode? "Cancelar" : "Seleccionar";
+  document.getElementById("selToggle").classList.toggle("on",selMode);
+  document.getElementById("selActions").style.display = selMode? "flex":"none";
+  const chk=document.getElementById("selAllChk"); if(chk) chk.checked=false;
+  renderFacturas();
+}
+function fChks(){ return [...document.querySelectorAll(".f_chk")]; }
+function toggleSel(num,rowEl){
+  const c=fChks().find(x=>x.dataset.num===num); if(c){ c.checked=!c.checked; syncSel(); }
+}
+function selAll(on){ fChks().forEach(c=>c.checked=on); syncSel(); }
+function syncSel(){
+  const sel=fChks().filter(c=>c.checked);
+  const cnt=document.getElementById("selCount"); if(cnt) cnt.textContent=sel.length;
+  fChks().forEach(c=>c.closest(".row").classList.toggle("on",c.checked));
+}
+function selectedNums(){ return fChks().filter(c=>c.checked).map(c=>c.dataset.num); }
+function delSelected(){
+  const nums=selectedNums();
+  if(!nums.length){ alert("No has marcado ninguna factura."); return; }
+  if(!confirm(`¿Eliminar ${nums.length} factura(s)?\n\nSe quitan del panel y del Sheet. No se puede deshacer.`)) return;
+  nums.forEach(n=>push("eliminarFactura",{numero:n}));
+  DATA.facturas=DATA.facturas.filter(f=>!nums.includes(f.numero));
+  toggleSelMode(); renderAll();
+}
+function quitarRetSelected(){
+  const nums=selectedNums();
+  if(!nums.length){ alert("No has marcado ninguna factura."); return; }
+  if(!confirm(`¿Quitar la retención REAL de ${nums.length} factura(s)?\n\nVuelven a la retención proyectada.`)) return;
+  nums.forEach(n=>{
+    const f=DATA.facturas.find(x=>x.numero===n); if(!f)return;
+    f.retReal=null; f.retNum="";
+    push("quitarRetencion",{numero:n});
+  });
+  toggleSelMode(); renderAll();
+}
+function anularSelected(){
+  const nums=selectedNums();
+  if(!nums.length){ alert("No has marcado ninguna factura."); return; }
+  if(!confirm(`¿Marcar como ANULADA ${nums.length} factura(s)?\n\nDejan de contar en saldos y comisiones, pero no se borran (las ves en el filtro «Anuladas»).`)) return;
+  nums.forEach(n=>{
+    const f=DATA.facturas.find(x=>x.numero===n); if(!f)return;
+    f.estadoPago="Anulada";
+    push("registrarCobro",f);
+  });
+  toggleSelMode(); renderAll();
 }
 
 // ---------- modal: nueva factura ----------
