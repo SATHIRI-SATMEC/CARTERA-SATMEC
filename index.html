@@ -263,10 +263,16 @@
       <div class="arr">›</div>
     </button>
 
-    <h2 class="section">Subir facturas de Datil</h2>
-    <button class="report" onclick="openImport()">
+    <h2 class="section">Subir facturas (Datil o SRI)</h2>
+    <button class="report" onclick="document.getElementById('fileXml').click()">
       <div class="ic"><svg viewBox="0 0 24 24"><path d="M12 3v12M7 8l5-5 5 5M5 21h14a2 2 0 002-2v-3"/></svg></div>
-      <div class="tx"><div class="t">Importar CSV de Datil</div><div class="d">Sube la exportación de tus comprobantes</div></div>
+      <div class="tx"><div class="t">Importar XML (recomendado)</div><div class="d">Un archivo por factura, con el total correcto</div></div>
+      <div class="arr">›</div>
+    </button>
+    <input type="file" id="fileXml" accept=".xml,text/xml,application/xml" multiple style="display:none" onchange="onXmlFiles(this)">
+    <button class="report" onclick="document.getElementById('fileCsv').click()">
+      <div class="ic"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 3v18"/></svg></div>
+      <div class="tx"><div class="t">Importar CSV de Datil</div><div class="d">Solo si no tienes los XML</div></div>
       <div class="arr">›</div>
     </button>
     <input type="file" id="fileCsv" accept=".csv,text/csv" style="display:none" onchange="onCsvFile(this)">
@@ -795,6 +801,67 @@ function undoImport(){
   _lastImport.forEach(numero=>push("eliminarFactura",{numero}));
   _lastImport=[]; updateUndoCard(); renderAll();
   alert("Importación deshecha.");
+}
+
+// ============ IMPORTAR XML (SRI / Datil) ============
+function onXmlFiles(input){
+  const files=[...input.files]; if(!files.length)return;
+  Promise.all(files.map(f=>f.text().catch(()=>""))).then(texts=>{
+    const list = texts.map(parseFacturaXml);
+    importParsed(list);
+    input.value="";
+  });
+}
+function parseFacturaXml(text){
+  if(!text) return null;
+  try{
+    const dp=new DOMParser();
+    let doc=dp.parseFromString(text,"application/xml");
+    // comprobante autorizado: el XML real viene dentro de <comprobante> (CDATA o escapado)
+    const comp=doc.querySelector("comprobante");
+    if(comp && /<factura/i.test(comp.textContent)){
+      doc=dp.parseFromString(comp.textContent,"application/xml");
+    }
+    const fact=doc.querySelector("factura");
+    if(!fact) return null;                 // no es factura (puede ser NC, retención, etc.)
+    const q=sel=>{const n=fact.querySelector(sel);return n?n.textContent.trim():"";};
+    const estab=q("infoTributaria estab"), pto=q("infoTributaria ptoEmi"), sec=q("infoTributaria secuencial");
+    const numero = (estab&&pto&&sec)? `${estab}-${pto}-${sec}` : q("infoTributaria claveAcceso");
+    if(!numero) return null;
+    let dias=0;
+    fact.querySelectorAll("infoFactura pagos pago").forEach(p=>{
+      const plz=p.querySelector("plazo"); if(!plz) return;
+      let d=+plz.textContent||0; const u=(p.querySelector("unidadTiempo")||{}).textContent||"";
+      if(/mes/i.test(u)) d*=30; if(d>dias) dias=d;
+    });
+    return {
+      numero,
+      cliente: q("infoFactura razonSocialComprador"),
+      ruc: q("infoFactura identificacionComprador"),
+      empresa: "SATHIRI",
+      fechaEmision: toISO(q("infoFactura fechaEmision")),
+      diasCredito: dias,
+      subtotal: toNum(q("infoFactura totalSinImpuestos")),
+      vendedor: "", comisionPct: 0,
+      estadoPago: "Pendiente", montoCobrado: 0, estadoComision: "Pendiente"
+    };
+  }catch(e){ return null; }
+}
+// importación común (usada por XML; el CSV tiene la suya con mapeo)
+function importParsed(list){
+  const exist=new Set(DATA.facturas.map(f=>String(f.numero)));
+  let add=0,dup=0,skip=0; const added=[];
+  list.forEach(f=>{
+    if(!f||!f.numero){ skip++; return; }
+    if(exist.has(String(f.numero))){ dup++; return; }
+    DATA.facturas.push(f); exist.add(String(f.numero)); added.push(f.numero); add++;
+    push("upsertFactura",f);
+  });
+  if(added.length){ _lastImport=added; updateUndoCard(); }
+  renderAll(); go("facturas");
+  alert(`Importadas ${add} facturas.${dup?` Se omitieron ${dup} repetidas.`:""}`+
+    `${skip?` ${skip} archivo(s) no eran facturas (notas de crédito u otros).`:""}`+
+    (add?"\n\nRevisa el vendedor y el % de comisión de cada una.":""));
 }
 
 // ---------- init ----------
