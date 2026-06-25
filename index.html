@@ -206,6 +206,12 @@
   .row.sel{cursor:pointer}
   .row.sel .f_chk{width:20px;height:20px;flex:0 0 auto;margin-right:4px}
   .row.on{background:#eef4ff}
+  .selbtn{display:inline-flex;align-items:center;gap:5px;font-weight:700}
+  .btn.ok{background:var(--ok);color:#fff}
+  .cli-search{width:100%;padding:12px;border:1px solid var(--line);border-radius:11px;font-size:15px;margin-bottom:10px;box-sizing:border-box}
+  .cli-list{max-height:46vh;overflow:auto;display:flex;flex-direction:column;gap:6px}
+  .cli-item{text-align:left;padding:13px 14px;border:1px solid var(--line);border-radius:11px;background:var(--card);font-size:14px;font-weight:600;cursor:pointer}
+  .cli-item:active{background:#eef4ff}
   .empty{text-align:center;color:var(--muted);padding:38px 16px;font-size:13.5px}
   .detalle{background:#f6f8fb;border:1px solid var(--line);border-radius:11px;padding:10px 12px;margin:8px 0 4px}
   .detalle .dt-h{font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);font-weight:700;margin-bottom:6px}
@@ -299,13 +305,14 @@
       <button data-f="anuladas">Anuladas</button>
     </div>
     <div class="selrow">
-      <button class="btn ghost sm" id="selToggle" style="margin:0" onclick="toggleSelMode()">Seleccionar</button>
+      <button class="btn ghost sm selbtn" id="selToggle" style="margin:0" onclick="toggleSelMode()">☑ Seleccionar</button>
       <div id="selActions" style="display:none">
         <label class="selall"><input type="checkbox" id="selAllChk" onchange="selAll(this.checked)"> Todas</label>
         <span id="selCount" class="selcount">0</span>
+        <button class="btn ok sm" style="margin:0" onclick="pagarSelected()">✓ Pagada</button>
         <button class="btn danger sm" style="margin:0" onclick="delSelected()">Eliminar</button>
-        <button class="btn ghost sm" style="margin:0" onclick="anularSelected()">Marcar anulada</button>
-        <button class="btn ghost sm" style="margin:0" onclick="quitarRetSelected()">Quitar retención</button>
+        <button class="btn ghost sm" style="margin:0" onclick="anularSelected()">Anular</button>
+        <button class="btn ghost sm" style="margin:0" onclick="quitarRetSelected()">Quitar ret.</button>
       </div>
     </div>
     <div class="card" style="padding:6px 16px"><div id="facList"></div></div>
@@ -650,6 +657,19 @@ function anularSelected(){
   });
   toggleSelMode(); renderAll();
 }
+function pagarSelected(){
+  const nums=selectedNums();
+  if(!nums.length){ alert("No has marcado ninguna factura."); return; }
+  if(!confirm(`¿Marcar como PAGADA ${nums.length} factura(s)?\n\nSe registra el cobro completo (el depósito esperado, ya con retención descontada) con fecha de hoy.`)) return;
+  const hoy=new Date().toISOString().slice(0,10);
+  nums.forEach(n=>{
+    const f=DATA.facturas.find(x=>x.numero===n); if(!f)return;
+    const dep=calc(f).deposito;
+    f.estadoPago="Pagada"; f.montoCobrado=dep; f.fechaCobro=hoy;
+    push("registrarCobro",f);
+  });
+  toggleSelMode(); renderAll();
+}
 
 // ---------- modal: nueva factura ----------
 function openForm(){
@@ -970,8 +990,8 @@ async function sync(){
   txt.textContent="Sincronizar";
 }
 function push(action,payload){
-  if(!cfg.url) return; // modo demo: solo en memoria
-  fetch(cfg.url,{method:"POST",headers:{"Content-Type":"text/plain;charset=utf-8"},
+  if(!cfg.url) return Promise.resolve(); // modo demo: solo en memoria
+  return fetch(cfg.url,{method:"POST",headers:{"Content-Type":"text/plain;charset=utf-8"},
     body:JSON.stringify({action,payload})}).catch(()=>{});
 }
 function saveCfg(){
@@ -1022,6 +1042,32 @@ function go(v){
 }
 function openModal(){document.getElementById("modal").classList.add("open");}
 function closeModal(){document.getElementById("modal").classList.remove("open");}
+
+// ---------- selector de cliente (buscable, dentro del panel) ----------
+let _cliPick=null, _cliAll=[];
+function pickCliente(onPick){
+  _cliPick=onPick;
+  _cliAll=[...new Set(rows().map(f=>f.cliente).filter(Boolean))].sort((a,b)=>a.localeCompare(b));
+  document.getElementById("modalTitle").textContent="Elige el cliente";
+  document.getElementById("modalBody").innerHTML=`
+    <input id="cliSearch" class="cli-search" placeholder="Buscar cliente…" autocomplete="off" oninput="filterCliPick(this.value)">
+    <div id="cliPickList" class="cli-list"></div>
+    <button class="btn ghost" onclick="closeModal()" style="margin-top:10px">Cancelar</button>`;
+  renderCliPick(_cliAll);
+  openModal();
+  setTimeout(()=>{const s=document.getElementById("cliSearch"); if(s)s.focus();},120);
+}
+function renderCliPick(list){
+  const el=document.getElementById("cliPickList"); if(!el)return;
+  el.innerHTML = list.length
+    ? list.map(c=>`<button class="cli-item" onclick='cliChosen(${JSON.stringify(c)})'>${c}</button>`).join("")
+    : '<div class="empty">Sin clientes que coincidan.</div>';
+}
+function filterCliPick(q){
+  q=(q||"").toLowerCase().trim();
+  renderCliPick(q? _cliAll.filter(c=>c.toLowerCase().includes(q)) : _cliAll);
+}
+function cliChosen(c){ const cb=_cliPick; _cliPick=null; closeModal(); if(cb) cb(c); }
 document.getElementById("modal").addEventListener("click",e=>{if(e.target.id==="modal")closeModal();});
 document.getElementById("facFilters").addEventListener("click",e=>{
   const b=e.target.closest("button"); if(!b)return;
@@ -1040,17 +1086,18 @@ function printDoc(html){document.getElementById("printArea").innerHTML=`<div cla
 
 function report(type){
   if(type==="estado"){
-    const cli=prompt("¿Estado de cuenta de qué cliente?\n\n"+[...new Set(rows().map(f=>f.cliente))].join("\n"));
-    if(!cli)return;
-    const r=rows().filter(f=>(f.cliente||"").toLowerCase()===cli.toLowerCase());
-    if(!r.length){alert("Sin facturas para ese cliente.");return;}
-    const saldo=r.reduce((a,f)=>a+Math.max(f.saldo,0),0);
-    printDoc(MEMBRETE("Estado de cuenta","Cliente: "+cli)+
-      `<table class="ptbl"><tr><th>Factura</th><th>Emisión</th><th>Vence</th><th class="r">Total</th><th class="r">Cobrado</th><th class="r">Saldo</th><th>Estado</th></tr>
-      ${r.map(f=>`<tr><td>${f.numero}</td><td>${fdate(f.emis)}</td><td>${fdate(f.venc)}</td>
-        <td class="r">${fmt(f.total)}</td><td class="r">${fmt(f.cobrado)}</td><td class="r">${fmt(Math.max(f.saldo,0))}</td>
-        <td>${({vencida:"Vencida",porvencer:"Por vencer",dia:"Al día",cobrada:"Cobrada",pendiente:"Pendiente"})[f.alerta]}</td></tr>`).join("")}
-      <tr class="ptot"><td colspan="5">SALDO PENDIENTE</td><td class="r">${fmt(saldo)}</td><td></td></tr></table>`+PFOOT);
+    pickCliente(cli=>{
+      const r=rows().filter(f=>(f.cliente||"").toLowerCase()===cli.toLowerCase());
+      if(!r.length){alert("Sin facturas para ese cliente.");return;}
+      const saldo=r.reduce((a,f)=>a+Math.max(f.saldo,0),0);
+      printDoc(MEMBRETE("Estado de cuenta","Cliente: "+cli)+
+        `<table class="ptbl"><tr><th>Factura</th><th>Emisión</th><th>Vence</th><th class="r">Total</th><th class="r">Cobrado</th><th class="r">Saldo</th><th>Estado</th></tr>
+        ${r.map(f=>`<tr><td>${f.numero}</td><td>${fdate(f.emis)}</td><td>${fdate(f.venc)}</td>
+          <td class="r">${fmt(f.total)}</td><td class="r">${fmt(f.cobrado)}</td><td class="r">${fmt(Math.max(f.saldo,0))}</td>
+          <td>${({vencida:"Vencida",porvencer:"Por vencer",dia:"Al día",cobrada:"Cobrada",pendiente:"Pendiente"})[f.alerta]}</td></tr>`).join("")}
+        <tr class="ptot"><td colspan="5">SALDO PENDIENTE</td><td class="r">${fmt(saldo)}</td><td></td></tr></table>`+PFOOT);
+    });
+    return;
   }
   else if(type==="aging"){
     const t=today(), r=rows().filter(f=>f.saldo>0);
@@ -1203,13 +1250,13 @@ function toISO(s){ if(!s)return ""; s=String(s).trim();
   let m=s.match(/^(\d{4})-(\d{2})-(\d{2})/); if(m)return m[1]+"-"+m[2]+"-"+m[3];
   m=s.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})/); if(m)return m[3]+"-"+String(m[2]).padStart(2,"0")+"-"+String(m[1]).padStart(2,"0");
   return ""; }
-function doImport(){
+async function doImport(){
   const gi=id=>+document.getElementById("map_"+id).value;
   const C={num:gi("num"),cli:gi("cli"),ruc:gi("ruc"),fec:gi("fec"),sub:gi("sub"),tot:gi("tot"),venc:gi("venc")};
   const ven=document.getElementById("map_ven").value;
   const vpct=(DATA.vendedores.find(v=>v.nombre===ven)||{}).pct||0;
   const exist=new Set(DATA.facturas.map(f=>String(f.numero)));
-  let add=0,dup=0; const added=[];
+  let add=0,dup=0; const added=[], addedObjs=[];
   _rows.forEach(r=>{
     const numero=C.num>=0?String(r[C.num]).trim():"";
     if(!numero){return;}
@@ -1222,15 +1269,20 @@ function doImport(){
     const f={numero,cliente:C.cli>=0?String(r[C.cli]).trim():"",ruc:C.ruc>=0?String(r[C.ruc]).trim():"",
       empresa:"SATHIRI",fechaEmision:fec,diasCredito:dias,subtotal:sub,
       vendedor:ven||"",comisionPct:vpct,estadoPago:"Pendiente",montoCobrado:0,estadoComision:"Pendiente"};
-    DATA.facturas.push(f); exist.add(numero); add++; added.push(numero);
-    push("upsertFactura",f);
+    DATA.facturas.push(f); exist.add(numero); add++; added.push(numero); addedObjs.push(f);
   });
   _lastImport = added;
   updateUndoCard();
   closeModal(); renderAll(); go("facturas");
-  alert(`Importadas ${add} facturas nuevas.${dup?` Se omitieron ${dup} que ya existían.`:""}`+
-    (add&&!ven?"\n\nRevisa el vendedor y los días de crédito si hace falta.":"")+
-    (add?"\n\nSi el lote salió mal, usa «Deshacer última importación» en Informes.":""));
+  if(addedObjs.length && cfg.url){
+    alert(`Importadas ${add} facturas nuevas.${dup?` Se omitieron ${dup} que ya existían.`:""}\n\nGuardando en tu hoja…`);
+    await push("upsertFacturasLote",{facturas:addedObjs});
+    await sync();
+  } else {
+    alert(`Importadas ${add} facturas nuevas.${dup?` Se omitieron ${dup} que ya existían.`:""}`+
+      (add&&!ven?"\n\nRevisa el vendedor y los días de crédito si hace falta.":"")+
+      (add?"\n\nSi el lote salió mal, usa «Deshacer última importación» en Informes.":""));
+  }
 }
 let _lastImport=[];
 function updateUndoCard(){
@@ -1300,20 +1352,25 @@ function parseFacturaXml(text){
   }catch(e){ return null; }
 }
 // importación común (usada por XML; el CSV tiene la suya con mapeo)
-function importParsed(list){
+async function importParsed(list){
   const exist=new Set(DATA.facturas.map(f=>String(f.numero)));
-  let add=0,dup=0,skip=0; const added=[];
+  let add=0,dup=0,skip=0; const added=[], addedObjs=[];
   list.forEach(f=>{
     if(!f||!f.numero){ skip++; return; }
     if(exist.has(String(f.numero))){ dup++; return; }
-    DATA.facturas.push(f); exist.add(String(f.numero)); added.push(f.numero); add++;
-    push("upsertFactura",f);
+    DATA.facturas.push(f); exist.add(String(f.numero)); added.push(f.numero); addedObjs.push(f); add++;
   });
   if(added.length){ _lastImport=added; updateUndoCard(); }
   renderAll(); go("facturas");
-  alert(`Importadas ${add} facturas.${dup?` Se omitieron ${dup} repetidas.`:""}`+
-    `${skip?` ${skip} archivo(s) no eran facturas (notas de crédito u otros).`:""}`+
-    (add?"\n\nRevisa el vendedor y el % de comisión de cada una.":""));
+  if(addedObjs.length && cfg.url){
+    alert(`Importadas ${add} facturas.${dup?` Se omitieron ${dup} repetidas.`:""}${skip?` ${skip} archivo(s) no eran facturas.`:""}\n\nGuardando en tu hoja…`);
+    await push("upsertFacturasLote",{facturas:addedObjs});  // un solo envío, sin colisiones
+    await sync();                                            // recarga del Sheet para confirmar
+  } else {
+    alert(`Importadas ${add} facturas.${dup?` Se omitieron ${dup} repetidas.`:""}`+
+      `${skip?` ${skip} archivo(s) no eran facturas (notas de crédito u otros).`:""}`+
+      (add?"\n\nRevisa el vendedor y el % de comisión de cada una.":""));
+  }
 }
 
 // ---------- init ----------
