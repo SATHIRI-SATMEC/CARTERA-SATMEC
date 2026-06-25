@@ -801,6 +801,7 @@ function openCobro(numero){
       <select id="c_com"><option ${f.estadoComision!=="Pagada"?"selected":""}>Pendiente</option>
       <option ${f.estadoComision==="Pagada"?"selected":""}>Pagada</option></select></label>
     <button class="btn" onclick='saveCobro(${JSON.stringify(numero)})'>Guardar cambios</button>
+    <button class="btn ghost" onclick='verFacturaPDF(${JSON.stringify(numero)})'>Ver / descargar PDF</button>
     <button class="btn ghost" onclick='openPago(${JSON.stringify(f.cliente)},${JSON.stringify(numero)})'>Registrar pago / abono…</button>
     <button class="btn ghost" onclick="closeModal()">Cerrar</button>
     <button class="btn danger" onclick='deleteFactura(${JSON.stringify(numero)})'>Eliminar factura</button>`;
@@ -1125,6 +1126,45 @@ const MEMBRETE = (titulo,sub)=>`<div class="ph">
   <div class="ti"><b>${titulo}</b><span>${sub||""}</span><span>Emitido: ${fdate(today())}</span></div></div>`;
 const PFOOT = `<div class="pfoot">Documento generado por el panel de cartera SATMEC. Valores referenciales sujetos a conciliación contable.</div>`;
 function printDoc(html){document.getElementById("printArea").innerHTML=`<div class="pdoc">${html}</div>`;setTimeout(()=>window.print(),60);}
+
+// ---------- factura tipo PDF (RIDE) ----------
+function verFacturaPDF(numero){
+  const fr=DATA.facturas.find(x=>String(x.numero)===String(numero)); if(!fr)return;
+  const f=calc(fr);
+  const emp = fr.empresa==="SATMEC" ? "SATMEC PROYECTOS INDUSTRIALES" : "SATHIRI PROYECTOS INTEGRALES";
+  const items = (fr.items&&fr.items.length)? fr.items : (fr.concepto? [{desc:fr.concepto,cant:1,total:fr.subtotal}] : []);
+  const filas = items.map(i=>{
+    const cant=+i.cant||1, tot=+i.total||0, pu = cant? tot/cant : tot;
+    return `<tr><td class="r">${cant}</td><td>${i.desc||""}</td><td class="r">${fmt(pu)}</td><td class="r">${fmt(tot)}</td></tr>`;
+  }).join("");
+  const estados={vencida:"Vencida",porvencer:"Por vencer",dia:"Al día",cobrada:"Cobrada",pendiente:"Pendiente",anulada:"Anulada"};
+  const doc=`
+    <div class="ph">
+      <div class="co">${emp}<small>Factura electrónica · Cartera</small></div>
+      <div class="ti"><b>FACTURA</b><span>N° ${fr.numero}</span><span>Emitida: ${fdate(f.emis)}</span><span>Vence: ${fdate(f.venc)}</span></div>
+    </div>
+    <table class="ptbl" style="margin-bottom:10px"><tr>
+      <td style="width:50%"><b>Cliente:</b> ${fr.cliente||"—"}</td>
+      <td><b>RUC/CI:</b> ${fr.ruc||"—"}</td></tr>
+      <tr><td><b>Días de crédito:</b> ${fr.diasCredito||0}</td><td><b>Estado:</b> ${estados[f.alerta]||"—"}</td></tr>
+    </table>
+    <table class="ptbl"><tr><th class="r">Cant.</th><th>Descripción</th><th class="r">P. Unit.</th><th class="r">Total</th></tr>
+      ${filas||'<tr><td colspan="4">Sin detalle de productos.</td></tr>'}
+      <tr class="ptot"><td colspan="3" class="r">Subtotal</td><td class="r">${fmt(f.sub)}</td></tr>
+      <tr><td colspan="3" class="r">IVA 15%</td><td class="r">${fmt(f.iva)}</td></tr>
+      <tr class="ptot"><td colspan="3" class="r">TOTAL FACTURA</td><td class="r">${fmt(f.total)}</td></tr>
+    </table>
+    <h4>Retenciones y cobro (datos del panel)</h4>
+    <table class="ptbl">
+      <tr><td>Retención renta (${(((fr.retRentaPct!=null?fr.retRentaPct:0.02))*100).toFixed(2)}%)</td><td class="r">${fmt(f.retRenta)}</td></tr>
+      <tr><td>Retención IVA (${(((fr.retIvaPct!=null?fr.retIvaPct:0.70))*100).toFixed(0)}% del IVA)</td><td class="r">${fmt(f.retIva)}</td></tr>
+      ${fr.retReal!=null&&fr.retReal!==""?`<tr><td>Retención REAL emitida${fr.retNum?" (N° "+fr.retNum+")":""}</td><td class="r">${fmt(fr.retReal)}</td></tr>`:""}
+      <tr class="ptot"><td>Total a recibir (depósito esperado)</td><td class="r">${fmt(f.deposito)}</td></tr>
+      <tr><td>Ya recibido</td><td class="r">${fmt(f.cobrado)}</td></tr>
+      <tr class="ptot"><td>Saldo por recibir</td><td class="r">${fmt(Math.max(f.saldo,0))}</td></tr>
+    </table>`;
+  printDoc(doc+PFOOT);
+}
 
 function report(type){
   if(type==="estado"){
