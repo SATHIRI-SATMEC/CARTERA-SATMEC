@@ -92,6 +92,7 @@
   .row .main{flex:1;min-width:0}
   .row .name{font-weight:600;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .row .meta{font-size:11.5px;color:var(--muted);margin-top:1px}
+  .row .concepto{font-size:12px;color:var(--text);margin-top:2px;line-height:1.3;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
   .row .amt{font-weight:700;text-align:right;white-space:nowrap}
   .tag{font-size:10px;font-weight:700;padding:2px 7px;border-radius:20px;letter-spacing:.02em}
   .tag.ok{background:#e2f3ea;color:var(--ok)} .tag.warn{background:#fcefdc;color:#b96510}
@@ -134,6 +135,28 @@
   .btn.danger:active{background:#fae3df}
   .hint{font-size:12px;color:var(--muted);margin-top:8px;line-height:1.5}
   .note{background:#fff7ec;border:1px solid #f3dcb6;border-radius:11px;padding:12px;font-size:12.5px;color:#8a5a16;margin-top:14px}
+  .ven-row{display:flex;align-items:center;gap:8px;padding:8px 0;border-top:1px solid var(--line)}
+  .ven-row:first-child{border-top:0}
+  .ven-name{flex:1;padding:10px;border:1px solid var(--line);border-radius:9px;font-size:14px;min-width:0}
+  .ven-pct{display:flex;align-items:center;gap:4px;flex:0 0 88px}
+  .ven-pct input{width:60px;padding:10px 8px;border:1px solid var(--line);border-radius:9px;font-size:14px;text-align:right}
+  .ven-pct span{color:var(--muted);font-weight:700;font-size:13px}
+  .ven-del{flex:0 0 auto;width:34px;height:34px;border:0;background:#f4f6f9;color:var(--bad);border-radius:9px;font-size:14px;font-weight:700}
+  .ven-del:active{background:#fae3df}
+  .ret{background:#f0f6ff;border:1px solid #d6e4f7;border-radius:12px;padding:12px;margin:10px 0}
+  .retbox{background:#fff;border:1px solid var(--line);border-radius:10px;padding:8px 11px;margin-top:6px}
+  .rb{display:flex;justify-content:space-between;gap:10px;font-size:13px;padding:2px 0}
+  .rb.sub{color:var(--muted);font-size:12.5px}
+  .rb.sub.real{color:#b06a00;font-weight:600}
+  .rb.tot{border-top:1px solid var(--line);margin-top:4px;padding-top:6px;font-weight:700}
+  .rb.tot.ok{color:var(--ok)} .rb.tot.pend{color:var(--brand)}
+  .rb b{font-variant-numeric:tabular-nums;white-space:nowrap}
+  .pck{display:flex;align-items:flex-start;gap:10px;padding:9px 4px;border-top:1px solid var(--line)}
+  .pck:first-child{border-top:0}
+  .pck input{margin-top:3px;width:18px;height:18px;flex:0 0 auto}
+  .pck-tx{min-width:0}
+  .pck-t{font-size:13.5px;font-weight:600}
+  .pck-d{font-size:12px;color:var(--muted);line-height:1.3;display:-webkit-box;-webkit-line-clamp:1;-webkit-box-orient:vertical;overflow:hidden}
 
   /* ---- bottom nav ---- */
   nav{position:fixed;left:0;right:0;bottom:0;z-index:30;background:#fff;border-top:1px solid var(--line);
@@ -150,7 +173,18 @@
   .grab{width:38px;height:4px;background:#d3d9e2;border-radius:3px;margin:8px auto 12px}
   .sheet h3{margin:4px 0 4px;font-size:18px}
   .grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  .pgo{border:1px solid var(--line);border-radius:12px;padding:11px 13px;margin-bottom:10px}
+  .pgo-top{display:flex;justify-content:space-between;align-items:baseline;gap:8px}
+  .pgo-top b{font-size:16px}.pgo-top span{font-size:12px;color:var(--muted)}
+  .pgo-cli{font-size:13.5px;font-weight:600;margin-top:2px}
+  .pgo-det{font-size:12px;color:var(--muted);margin-top:3px;line-height:1.35}
+  .btn.sm{padding:7px;font-size:13px;margin-top:9px}
   .empty{text-align:center;color:var(--muted);padding:38px 16px;font-size:13.5px}
+  .detalle{background:#f6f8fb;border:1px solid var(--line);border-radius:11px;padding:10px 12px;margin:8px 0 4px}
+  .detalle .dt-h{font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);font-weight:700;margin-bottom:6px}
+  .detalle .dt-row{display:flex;justify-content:space-between;gap:10px;font-size:13px;padding:3px 0;border-top:1px solid #e6ebf1}
+  .detalle .dt-row:first-of-type{border-top:0}
+  .detalle .dt-row b{white-space:nowrap;font-variant-numeric:tabular-nums}
 
   /* ---- print / informes ---- */
   #printArea{display:none}
@@ -219,6 +253,10 @@
 
   <!-- ============ FACTURAS ============ -->
   <section class="view" id="v-facturas">
+    <div class="grid2" style="margin:0 0 12px">
+      <button class="btn" style="margin:0" onclick="openPago('')">＋ Registrar pago</button>
+      <button class="btn ghost" style="margin:0" onclick="openPagosList()">Ver pagos</button>
+    </div>
     <div class="filters" id="facFilters">
       <button class="on" data-f="todas">Todas</button>
       <button data-f="vencidas">Vencidas</button>
@@ -294,6 +332,12 @@
       <p class="hint">Pega aquí la URL que te da Apps Script al publicar el proyecto como aplicación web. Mientras no la configures, el panel funciona con datos de ejemplo para que veas cómo se comporta.</p>
       <div class="note">El panel lee y escribe en el mismo Google Sheet de tu control de cartera. Cualquier factura o cobro que registres queda guardado ahí y se refleja también en la versión de Excel.</div>
     </div>
+    <h2 class="section">Vendedores y comisiones</h2>
+    <div class="card">
+      <div id="venList"></div>
+      <button class="btn ghost" onclick="addVendedor()" style="margin-top:12px">+ Agregar vendedor</button>
+      <p class="hint">El % es sobre el subtotal de la factura. Al registrar una factura, eliges el vendedor y la comisión se calcula sola; solo cuenta como “por pagar” cuando la factura está cobrada.</p>
+    </div>
     <h2 class="section">Estado</h2>
     <div class="card"><div id="cfgState" style="font-size:13px;color:var(--muted)"></div></div>
   </section>
@@ -331,8 +375,10 @@ const fdate = d => d? String(d.getDate()).padStart(2,"0")+"/"+String(d.getMonth(
 const addDays=(d,n)=>{const x=new Date(d);x.setDate(x.getDate()+n);return x;};
 const store={ get(k){try{return localStorage.getItem(k)}catch(e){return null}}, set(k,v){try{localStorage.setItem(k,v)}catch(e){}} };
 
-let DATA={facturas:[],clientes:[],vendedores:[]};
+let DATA={facturas:[],clientes:[],vendedores:[],pagos:[]};
 let cfg={url: store.get("cartera_url")||""};
+const DEF_RENTA = 0.02;   // 2% renta sobre subtotal (editable por factura)
+const DEF_IVA   = 0.70;   // 70% del IVA (editable por factura)
 
 // ---------- enriquecer factura con cálculos ----------
 function calc(f){
@@ -340,8 +386,17 @@ function calc(f){
   const iva = f.ivaManual!=null && f.ivaManual!=="" ? +f.ivaManual : +(sub*IVA).toFixed(2);
   const total=+(sub+iva).toFixed(2);
   const com=+(sub*(+f.comisionPct||0)).toFixed(2);
+  // retenciones
+  const retRentaPct = (f.retRentaPct!=null && f.retRentaPct!=="") ? +f.retRentaPct : DEF_RENTA;
+  const retIvaPct   = (f.retIvaPct!=null && f.retIvaPct!=="") ? +f.retIvaPct : DEF_IVA;
+  const retRentaProj = +(sub*retRentaPct).toFixed(2);
+  const retIvaProj   = +(iva*retIvaPct).toFixed(2);
+  const retProj = +(retRentaProj+retIvaProj).toFixed(2);
+  const retReal = (f.retReal!=null && f.retReal!=="") ? +f.retReal : null;
+  const retencion = retReal!=null ? retReal : retProj;     // real si existe, si no la proyectada
+  const deposito = +(total-retencion).toFixed(2);          // lo que te deben depositar
   const cobrado=+f.montoCobrado||0;
-  const saldo=+(total-cobrado).toFixed(2);
+  const saldo=+(deposito-cobrado).toFixed(2);              // lo que falta que te depositen
   const emis=pd(f.fechaEmision);
   const venc = emis? addDays(emis,+f.diasCredito||0):null;
   const t=today();
@@ -353,7 +408,8 @@ function calc(f){
   else if(venc<t) alerta="vencida";
   else if(venc<=addDays(t,7)) alerta="porvencer";
   else alerta="dia";
-  return {...f,sub,iva,total,com,cobrado,saldo,emis,venc,diasVenc,alerta};
+  return {...f,sub,iva,total,com,retRentaPct,retIvaPct,retRentaProj,retIvaProj,retProj,
+          retReal,retencion,deposito,cobrado,saldo,emis,venc,diasVenc,alerta};
 }
 const rows = ()=>DATA.facturas.map(calc).filter(f=>f.estadoPago!=="Anulada");
 
@@ -455,8 +511,10 @@ function renderFacturas(){
     const [tc,tt]=tagMap[f.alerta]||["pend",""];
     const chip=f.empresa==="SATMEC"?'<span class="chip smc">SATMEC</span>':'<span class="chip sat">SATHIRI</span>';
     const extra = f.alerta==="vencida"? `${Math.abs(f.diasVenc)} d vencida` : f.venc&&f.saldo>0? "vence "+fdate(f.venc):"";
+    const concepto = f.concepto? `<div class="concepto">${f.concepto}</div>` : "";
     return `<div class="row" onclick='openCobro(${JSON.stringify(f.numero)})'>
       <div class="main"><div class="name">${chip} ${f.cliente||"—"}</div>
+      ${concepto}
       <div class="meta num">${f.numero} · ${fmt(f.saldo>0?f.saldo:f.total)} ${extra?"· "+extra:""}</div></div>
       <span class="tag ${tc}">${tt}</span></div>`;
   }).join("") : '<div class="empty">No hay facturas en este filtro.<br>Toca + para registrar una.</div>';
@@ -480,6 +538,7 @@ function openForm(){
       <label class="field"><span class="l">Días crédito</span><input id="i_dias" type="number" value="30" inputmode="numeric"></label>
     </div>
     <label class="field"><span class="l">Subtotal (sin IVA)</span><input id="i_sub" type="number" inputmode="decimal" placeholder="0.00"></label>
+    <label class="field"><span class="l">Concepto / detalle (de qué es)</span><input id="i_con" placeholder="Ej. Construcción de foso metálico"></label>
     <div class="grid2">
       <label class="field"><span class="l">Vendedor</span><input id="i_ven" list="dlV"></label>
       <label class="field"><span class="l">% comisión</span><input id="i_com" type="number" inputmode="decimal" placeholder="5"></label>
@@ -493,7 +552,7 @@ function saveFactura(){
   if(!g("i_num")||!g("i_sub")){alert("Pon al menos el N° y el subtotal.");return;}
   const v=DATA.vendedores.find(x=>x.nombre===g("i_ven"));
   const f={numero:g("i_num"),cliente:g("i_cli"),empresa:g("i_emp"),fechaEmision:g("i_fec"),
-    diasCredito:+g("i_dias")||0,subtotal:+g("i_sub")||0,vendedor:g("i_ven"),
+    diasCredito:+g("i_dias")||0,subtotal:+g("i_sub")||0,concepto:g("i_con"),vendedor:g("i_ven"),
     comisionPct: g("i_com")? (+g("i_com")/100) : (v? v.pct:0),
     estadoPago:"Pendiente",montoCobrado:0,estadoComision:"Pendiente"};
   DATA.facturas.push(f);
@@ -504,11 +563,38 @@ function saveFactura(){
 function openCobro(numero){
   const f=DATA.facturas.find(x=>x.numero===numero); if(!f)return;
   const c=calc(f);
+  let detalle="";
+  if(f.items && f.items.length){
+    detalle=`<div class="detalle"><div class="dt-h">Detalle</div>`+
+      f.items.map(i=>`<div class="dt-row"><span>${i.cant?i.cant+"× ":""}${i.desc}</span><b>${fmt(i.total)}</b></div>`).join("")+`</div>`;
+  } else if(f.concepto){
+    detalle=`<div class="detalle"><div class="dt-h">Concepto</div><div class="dt-row"><span>${f.concepto}</span></div></div>`;
+  }
   document.getElementById("modalTitle").textContent="Factura "+numero;
   document.getElementById("modalBody").innerHTML=`
     <div class="row" style="border:0"><div class="main">
       <div class="name">${f.cliente||"—"}</div>
-      <div class="meta">Total ${fmt(c.total)} · Saldo ${fmt(c.saldo)} · vence ${fdate(c.venc)}</div></div></div>
+      <div class="meta">Subtotal ${fmt(c.sub)} · IVA ${fmt(c.iva)} · Total ${fmt(c.total)} · vence ${fdate(c.venc)}</div></div></div>
+    ${detalle}
+
+    <div class="ret">
+      <div class="dt-h">Retenciones que te hacen</div>
+      <div class="grid2">
+        <label class="field"><span class="l">Ret. renta % (sobre subtotal)</span>
+          <input id="c_rr" type="number" inputmode="decimal" step="0.01" value="${(c.retRentaPct*100).toFixed(2)}" oninput="retPrev('${numero}')"></label>
+        <label class="field"><span class="l">Ret. IVA % (del IVA)</span>
+          <input id="c_ri" type="number" inputmode="decimal" step="1" value="${(c.retIvaPct*100).toFixed(0)}" oninput="retPrev('${numero}')"></label>
+      </div>
+      <div class="grid2">
+        <label class="field"><span class="l">Retención REAL (si ya te la emitieron)</span>
+          <input id="c_real" type="number" inputmode="decimal" placeholder="proyectada" value="${f.retReal!=null&&f.retReal!==""?f.retReal:""}" oninput="retPrev('${numero}')"></label>
+        <label class="field"><span class="l">N° comprobante retención</span>
+          <input id="c_rnum" placeholder="001-001-..." value="${f.retNum||""}"></label>
+      </div>
+      <div id="retPrev" class="retbox"></div>
+    </div>
+
+    <div class="dt-h" style="margin-top:6px">Cobro</div>
     <label class="field"><span class="l">Estado de pago</span>
       <select id="c_est"><option ${f.estadoPago==="Pendiente"?"selected":""}>Pendiente</option>
       <option ${f.estadoPago==="Parcial"?"selected":""}>Parcial</option>
@@ -516,15 +602,42 @@ function openCobro(numero){
       <option ${f.estadoPago==="Anulada"?"selected":""}>Anulada</option></select></label>
     <div class="grid2">
       <label class="field"><span class="l">Fecha de cobro</span><input id="c_fec" type="date" value="${f.fechaCobro||""}"></label>
-      <label class="field"><span class="l">Monto cobrado</span><input id="c_mon" type="number" inputmode="decimal" value="${f.montoCobrado||""}"></label>
+      <label class="field"><span class="l">Depositado a esta factura</span><input id="c_mon" type="number" inputmode="decimal" value="${f.montoCobrado||""}" oninput="retPrev('${numero}')"></label>
     </div>
     <label class="field"><span class="l">Comisión al vendedor (${fmt(c.com)})</span>
       <select id="c_com"><option ${f.estadoComision!=="Pagada"?"selected":""}>Pendiente</option>
       <option ${f.estadoComision==="Pagada"?"selected":""}>Pagada</option></select></label>
     <button class="btn" onclick='saveCobro(${JSON.stringify(numero)})'>Guardar cambios</button>
+    <button class="btn ghost" onclick='openPago(${JSON.stringify(f.cliente)},${JSON.stringify(numero)})'>Registrar pago / abono…</button>
     <button class="btn ghost" onclick="closeModal()">Cerrar</button>
     <button class="btn danger" onclick='deleteFactura(${JSON.stringify(numero)})'>Eliminar factura</button>`;
+  retPrev(numero);
   openModal();
+}
+// recalcula y muestra el desglose en vivo dentro del modal de factura
+function retPrev(numero){
+  const f=DATA.facturas.find(x=>x.numero===numero); if(!f)return;
+  const g=id=>{const e=document.getElementById(id);return e?e.value:"";};
+  const sub=+f.subtotal||0;
+  const iva = f.ivaManual!=null&&f.ivaManual!=="" ? +f.ivaManual : +(sub*IVA).toFixed(2);
+  const total=+(sub+iva).toFixed(2);
+  const rr=(+g("c_rr")||0)/100, ri=(+g("c_ri")||0)/100;
+  const rRenta=+(sub*rr).toFixed(2), rIva=+(iva*ri).toFixed(2);
+  const proj=+(rRenta+rIva).toFixed(2);
+  const realV=g("c_real"); const real = realV!==""? +realV : null;
+  const retencion = real!=null? real : proj;
+  const deposito=+(total-retencion).toFixed(2);
+  const cobrado=+g("c_mon")||0;
+  const saldo=+(deposito-cobrado).toFixed(2);
+  const box=document.getElementById("retPrev"); if(!box)return;
+  box.innerHTML=`
+    <div class="rb"><span>Total factura</span><b>${fmt(total)}</b></div>
+    <div class="rb sub"><span>− Ret. renta (${(rr*100).toFixed(2)}%)</span><b>−${fmt(rRenta)}</b></div>
+    <div class="rb sub"><span>− Ret. IVA (${(ri*100).toFixed(0)}%)</span><b>−${fmt(rIva)}</b></div>
+    ${real!=null?`<div class="rb sub real"><span>Retención real registrada</span><b>−${fmt(real)}</b></div>`:""}
+    <div class="rb tot"><span>= Te deben depositar</span><b>${fmt(deposito)}</b></div>
+    ${cobrado>0?`<div class="rb sub"><span>Ya depositado</span><b>${fmt(cobrado)}</b></div>
+    <div class="rb tot ${saldo<=0.005?'ok':'pend'}"><span>${saldo<=0.005?'Depósito completo':'Falta por depositar'}</span><b>${fmt(Math.max(saldo,0))}</b></div>`:""}`;
 }
 function deleteFactura(numero){
   const f=DATA.facturas.find(x=>x.numero===numero); if(!f)return;
@@ -536,9 +649,176 @@ function deleteFactura(numero){
 function saveCobro(numero){
   const f=DATA.facturas.find(x=>x.numero===numero); if(!f)return;
   const g=id=>document.getElementById(id).value;
+  f.retRentaPct=(+g("c_rr")||0)/100;
+  f.retIvaPct=(+g("c_ri")||0)/100;
+  f.retReal = g("c_real")!==""? (+g("c_real")||0) : null;
+  f.retNum=g("c_rnum");
   f.estadoPago=g("c_est"); f.fechaCobro=g("c_fec"); f.montoCobrado=+g("c_mon")||0; f.estadoComision=g("c_com");
-  if(f.estadoPago==="Pagada"&&!f.montoCobrado) f.montoCobrado=calc(f).total;
+  if(f.estadoPago==="Pagada"&&!f.montoCobrado) f.montoCobrado=calc(f).deposito;
   push("registrarCobro",f);
+  closeModal(); renderAll();
+}
+
+// ---------- PAGOS / ABONOS (uno o varios) ----------
+function clientesConSaldo(){
+  const set=new Set();
+  rows().forEach(f=>{ if(f.saldo>0.005) set.add(f.cliente); });
+  return [...set].filter(Boolean).sort();
+}
+function openPago(clientePre, facturaPre){
+  closeModal();
+  const cli = clientePre || (clientesConSaldo()[0]||"");
+  const opts = clientesConSaldo().map(c=>`<option ${c===cli?"selected":""}>${c}</option>`).join("");
+  document.getElementById("modalTitle").textContent="Registrar pago / abono";
+  document.getElementById("modalBody").innerHTML=`
+    <label class="field"><span class="l">Cliente</span>
+      <select id="p_cli" onchange="pagoListaFacturas()">${opts||'<option value="">— sin facturas pendientes —</option>'}</select></label>
+    <div class="grid2">
+      <label class="field"><span class="l">Tipo</span>
+        <select id="p_tipo"><option>Transferencia</option><option>Cheque</option><option>Anticipo</option><option>Efectivo</option></select></label>
+      <label class="field"><span class="l">Fecha</span><input id="p_fec" type="date" value="${new Date().toISOString().slice(0,10)}"></label>
+    </div>
+    <div class="grid2">
+      <label class="field"><span class="l">Monto depositado</span><input id="p_mon" type="number" inputmode="decimal" placeholder="0.00" oninput="pagoSum()"></label>
+      <label class="field"><span class="l">N° comprobante (opcional)</span><input id="p_comp" placeholder="ref / cheque"></label>
+    </div>
+    <label class="field"><span class="l">Notas (opcional)</span><input id="p_notas" placeholder=""></label>
+
+    <div class="dt-h" style="margin-top:8px">¿Qué facturas cubre este depósito?</div>
+    <p class="hint" style="margin:2px 0 8px">El monto ya viene con retenciones descontadas. Marca las facturas, o usa “Sugerir” para que el panel busque la combinación que cuadra.</p>
+    <div id="p_lista"></div>
+    <div id="p_sum" class="retbox" style="margin-top:8px"></div>
+    <button class="btn ghost" onclick="sugerirPago()">🔍 Sugerir combinación</button>
+    <button class="btn" onclick="savePago()">Guardar pago</button>
+    <button class="btn ghost" onclick="closeModal()">Cancelar</button>`;
+  openModal();
+  pagoListaFacturas(facturaPre);
+}
+function pagoFacturasDe(cli){
+  return rows().filter(f=>f.cliente===cli && f.saldo>0.005)
+    .sort((a,b)=>(a.venc||a.emis||0)-(b.venc||b.emis||0));
+}
+function pagoListaFacturas(preselect){
+  const cli=document.getElementById("p_cli").value;
+  const list=pagoFacturasDe(cli);
+  const el=document.getElementById("p_lista");
+  if(!list.length){ el.innerHTML='<div class="empty">Este cliente no tiene saldo pendiente.</div>'; pagoSum(); return; }
+  el.innerHTML=list.map(f=>`
+    <label class="pck">
+      <input type="checkbox" class="p_chk" data-num="${f.numero}" data-saldo="${f.saldo}" ${preselect&&f.numero===preselect?"checked":""} onchange="pagoSum()">
+      <div class="pck-tx"><div class="pck-t">${f.numero} · ${fmt(f.saldo)}</div>
+      <div class="pck-d">${f.concepto?f.concepto:("vence "+fdate(f.venc))}</div></div>
+    </label>`).join("");
+  pagoSum();
+}
+function pagoChecks(){ return [...document.querySelectorAll(".p_chk")]; }
+function pagoSum(){
+  const monto=+document.getElementById("p_mon").value||0;
+  const sel=pagoChecks().filter(c=>c.checked);
+  const suma=sel.reduce((a,c)=>a+(+c.dataset.saldo||0),0);
+  const dif=+(monto-suma).toFixed(2);
+  const box=document.getElementById("p_sum");
+  let estado="", cls="";
+  if(!sel.length){ estado="No has marcado facturas"; cls="pend"; }
+  else if(Math.abs(dif)<=0.05){ estado="✓ Cuadra exacto"; cls="ok"; }
+  else if(dif>0){ estado=`Sobran ${fmt(dif)} (queda como anticipo)`; cls="pend"; }
+  else { estado=`Faltan ${fmt(-dif)} para cubrir lo marcado`; cls="pend"; }
+  box.innerHTML=`<div class="rb"><span>Depósito</span><b>${fmt(monto)}</b></div>
+    <div class="rb sub"><span>Suma de facturas marcadas (${sel.length})</span><b>${fmt(suma)}</b></div>
+    <div class="rb tot ${cls}"><span>${estado}</span><b>${fmt(suma)}</b></div>`;
+}
+// subset-sum: busca un subconjunto de saldos que sume el monto (± 2 centavos)
+function sugerirPago(){
+  const monto=+document.getElementById("p_mon").value||0;
+  if(monto<=0){ alert("Primero escribe el monto depositado."); return; }
+  const items=pagoChecks().map(c=>({el:c, s:Math.round((+c.dataset.saldo)*100)}));
+  const target=Math.round(monto*100), tol=2, N=items.length;
+  let best=null;
+  const lim = N<=22? (1<<N) : 0;
+  if(lim){
+    for(let mask=1; mask<lim; mask++){
+      let sum=0,cnt=0;
+      for(let i=0;i<N;i++) if(mask&(1<<i)){ sum+=items[i].s; cnt++; }
+      if(Math.abs(sum-target)<=tol){ if(!best||cnt<best.cnt){ best={mask,cnt}; } }
+    }
+  }
+  if(!best){
+    pagoChecks().forEach(c=>c.checked=false);
+    let acc=0; for(const it of items){ if(acc+it.s<=target+tol){ it.el.checked=true; acc+=it.s; } }
+    pagoSum();
+    alert("No encontré una combinación exacta. Marqué las facturas más antiguas que caben en el monto; ajusta a mano si hace falta.");
+    return;
+  }
+  items.forEach((it,i)=> it.el.checked = !!(best.mask&(1<<i)));
+  pagoSum();
+}
+function savePago(){
+  const g=id=>document.getElementById(id).value;
+  const cli=g("p_cli"), tipo=g("p_tipo"), fecha=g("p_fec"), monto=+g("p_mon")||0;
+  if(monto<=0){ alert("Escribe el monto depositado."); return; }
+  const sel=pagoChecks().filter(c=>c.checked).map(c=>c.dataset.num);
+  let rem=monto; const aplicaciones=[]; const aplicados=[];
+  const ordered=pagoFacturasDe(cli).filter(f=>sel.includes(f.numero));
+  ordered.forEach(f=>{
+    if(rem<=0.005) return;
+    const aplica=Math.min(f.saldo, rem); rem=+(rem-aplica).toFixed(2);
+    const nuevoCobrado=+((+f.montoCobrado||0)+aplica).toFixed(2);
+    const dep=calc(f).deposito;
+    const estado = nuevoCobrado>=dep-0.005 ? "Pagada" : "Parcial";
+    const orig=DATA.facturas.find(x=>x.numero===f.numero);
+    if(orig){ orig.montoCobrado=nuevoCobrado; orig.estadoPago=estado; orig.fechaCobro=fecha; }
+    aplicaciones.push({numero:f.numero, montoCobrado:nuevoCobrado, estadoPago:estado, fechaCobro:fecha});
+    aplicados.push({numero:f.numero, aplicado:aplica});
+  });
+  const pago={ id:"P"+Date.now(), fecha, cliente:cli, tipo, monto,
+    comprobante:g("p_comp"), notas:g("p_notas"),
+    aplicaciones:aplicados,                                   // {numero, aplicado} por factura
+    facturas:aplicados.map(a=>a.numero+":"+a.aplicado) };     // se persiste así en el Sheet
+  DATA.pagos=DATA.pagos||[]; DATA.pagos.push(pago);
+  push("registrarPago",{pago, aplicaciones});
+  let msg=`Pago de ${fmt(monto)} registrado.`;
+  if(aplicados.length) msg+=`\nAplicado a ${aplicados.length} factura(s).`;
+  if(rem>0.05) msg+=`\nQuedan ${fmt(rem)} como saldo a favor (anticipo).`;
+  closeModal(); renderAll(); alert(msg);
+}
+
+// ---------- listado / borrado de pagos ----------
+function openPagosList(){
+  closeModal();
+  const pagos=(DATA.pagos||[]).slice().reverse();
+  document.getElementById("modalTitle").textContent="Pagos registrados";
+  document.getElementById("modalBody").innerHTML = pagos.length
+    ? pagos.map(p=>{
+        const n=(p.aplicaciones&&p.aplicaciones.length)||(p.facturas&&p.facturas.length)||0;
+        const det = p.aplicaciones&&p.aplicaciones.length
+          ? p.aplicaciones.map(a=>`${a.numero} (${fmt(a.aplicado)})`).join(", ")
+          : (p.facturas||[]).join(", ");
+        return `<div class="pgo">
+          <div class="pgo-top"><b>${fmt(p.monto)}</b><span>${p.tipo} · ${fdate(p.fecha)}</span></div>
+          <div class="pgo-cli">${p.cliente||"—"}${p.comprobante?" · "+p.comprobante:""}</div>
+          <div class="pgo-det">${n?det:"sin aplicar (anticipo)"}</div>
+          ${p.notas?`<div class="pgo-det">${p.notas}</div>`:""}
+          <button class="btn danger sm" onclick='deletePago(${JSON.stringify(p.id)})'>Eliminar pago</button>
+        </div>`;
+      }).join("")
+    : '<div class="empty">Aún no has registrado pagos.</div>';
+  document.getElementById("modalBody").innerHTML+=`<button class="btn ghost" onclick="closeModal()">Cerrar</button>`;
+  openModal();
+}
+function deletePago(id){
+  const p=(DATA.pagos||[]).find(x=>x.id===id); if(!p)return;
+  if(!confirm(`¿Eliminar este pago de ${fmt(p.monto)}?\n\nSe revertirá el cobro en las facturas que cubría.`)) return;
+  const reversos=[];
+  (p.aplicaciones||[]).forEach(a=>{
+    const f=DATA.facturas.find(x=>x.numero===a.numero); if(!f)return;
+    const nuevoCobrado=Math.max(0, +((+f.montoCobrado||0)-(+a.aplicado||0)).toFixed(2));
+    const dep=calc(f).deposito;
+    const estado = nuevoCobrado<=0.005 ? "Pendiente" : (nuevoCobrado>=dep-0.005 ? "Pagada" : "Parcial");
+    f.montoCobrado=nuevoCobrado; f.estadoPago=estado;
+    reversos.push({numero:a.numero, montoCobrado:nuevoCobrado, estadoPago:estado, fechaCobro:f.fechaCobro||""});
+  });
+  DATA.pagos=(DATA.pagos||[]).filter(x=>x.id!==id);
+  push("eliminarPago",{id, reversos});
   closeModal(); renderAll();
 }
 
@@ -554,7 +834,7 @@ async function sync(){
     const res=await fetch(cfg.url+"?action=getData",{method:"GET"});
     const j=await res.json();
     if(j.facturas){DATA=j; setConn(true);} else throw 0;
-    renderAll();
+    renderAll(); renderVendedores();
   }catch(e){ alert("No se pudo conectar. Revisa la URL del Web App y que esté publicado para «Cualquier usuario»."); setConn(false);}
   txt.textContent="Sincronizar";
 }
@@ -568,7 +848,39 @@ function saveCfg(){
   store.set("cartera_url",cfg.url);
   sync();
 }
-function useDemo(){ loadDemo(); setConn(false); renderAll(); go("tablero"); }
+function useDemo(){ loadDemo(); setConn(false); renderAll(); renderVendedores(); go("tablero"); }
+
+// ---------- vendedores ----------
+function renderVendedores(){
+  const el=document.getElementById("venList"); if(!el)return;
+  if(!DATA.vendedores.length){ el.innerHTML='<div class="empty">Aún no hay vendedores. Agrega el primero abajo.</div>'; return; }
+  el.innerHTML=DATA.vendedores.map((v,i)=>`
+    <div class="ven-row">
+      <input class="ven-name" value="${(v.nombre||"").replace(/"/g,'&quot;')}" onchange="editVendedor(${i},'nombre',this.value)" placeholder="Nombre del vendedor">
+      <div class="ven-pct"><input type="number" inputmode="decimal" step="0.1" value="${(v.pct*100).toFixed(1)}" onchange="editVendedor(${i},'pct',this.value)"><span>%</span></div>
+      <button class="ven-del" onclick="delVendedor(${i})" title="Eliminar">✕</button>
+    </div>`).join("");
+}
+function addVendedor(){
+  DATA.vendedores.push({nombre:"", pct:0.05});
+  renderVendedores();
+  // enfocar el último nombre
+  const inputs=document.querySelectorAll("#venList .ven-name");
+  if(inputs.length) inputs[inputs.length-1].focus();
+}
+function editVendedor(i,campo,val){
+  const v=DATA.vendedores[i]; if(!v)return;
+  if(campo==="nombre"){ const old=v.nombre; v.nombre=val.trim();
+    if(v.nombre){ pushVen(v); if(old && old!==v.nombre) push("eliminarVendedor",{nombre:old}); } }
+  else if(campo==="pct"){ v.pct=(+val||0)/100; if(v.nombre) pushVen(v); }
+}
+function delVendedor(i){
+  const v=DATA.vendedores[i]; if(!v)return;
+  if(v.nombre && !confirm(`¿Eliminar al vendedor ${v.nombre}?`)) return;
+  if(v.nombre) push("eliminarVendedor",{nombre:v.nombre});
+  DATA.vendedores.splice(i,1); renderVendedores();
+}
+function pushVen(v){ if(v.nombre) push("upsertVendedor",{nombre:v.nombre, pct:v.pct}); }
 
 // ---------- navegación ----------
 function go(v){
@@ -661,8 +973,8 @@ function report(type){
   }
 }
 function exportCSV(){
-  const head=["N Factura","Cliente","RUC","Empresa","Emision","Vence","Subtotal","IVA","Total","Vendedor","%Com","Comision","EstadoPago","FechaCobro","Cobrado","Saldo","EstadoComision","Alerta"];
-  const lines=rows().map(f=>[f.numero,f.cliente,f.ruc||"",f.empresa,fdate(f.emis),fdate(f.venc),f.sub,f.iva,f.total,f.vendedor||"",
+  const head=["N Factura","Cliente","RUC","Empresa","Concepto","Emision","Vence","Subtotal","IVA","Total","Vendedor","%Com","Comision","EstadoPago","FechaCobro","Cobrado","Saldo","EstadoComision","Alerta"];
+  const lines=rows().map(f=>[f.numero,f.cliente,f.ruc||"",f.empresa,f.concepto||"",fdate(f.emis),fdate(f.venc),f.sub,f.iva,f.total,f.vendedor||"",
     (f.comisionPct*100).toFixed(1),f.com,f.estadoPago,f.fechaCobro||"",f.cobrado,Math.max(f.saldo,0),f.estadoComision||"",f.alerta]
     .map(x=>`"${String(x).replace(/"/g,'""')}"`).join(","));
   const csv="\uFEFF"+[head.join(","),...lines].join("\n");
@@ -679,13 +991,14 @@ function loadDemo(){
       {nombre:"GAD DMQ",ruc:"1760003410001"},{nombre:"Chaide y Chaide",ruc:"1790016919001"},
       {nombre:"Cliente Privado Demo",ruc:"0900000000001"}],
     vendedores:[{nombre:"Christian Romero",pct:0.05},{nombre:"Vendedor Demo",pct:0.03}],
+    pagos:[],
     facturas:[
-      {numero:"001-002-0000123",cliente:"EPMMOP",empresa:"SATHIRI",fechaEmision:d(-25),diasCredito:90,subtotal:15000,vendedor:"Christian Romero",comisionPct:0.05,estadoPago:"Pendiente",montoCobrado:0,estadoComision:"Pendiente"},
-      {numero:"001-002-0000124",cliente:"Chaide y Chaide",empresa:"SATMEC",fechaEmision:d(-40),diasCredito:30,subtotal:8200,vendedor:"Christian Romero",comisionPct:0.05,estadoPago:"Pagada",fechaCobro:d(-5),montoCobrado:9430,estadoComision:"Pendiente"},
-      {numero:"001-002-0000125",cliente:"Cliente Privado Demo",empresa:"SATMEC",fechaEmision:d(-10),diasCredito:15,subtotal:3500,vendedor:"Vendedor Demo",comisionPct:0.03,estadoPago:"Parcial",fechaCobro:d(-2),montoCobrado:2000,estadoComision:"Pendiente"},
-      {numero:"001-002-0000126",cliente:"EPMAPS",empresa:"SATHIRI",fechaEmision:d(-120),diasCredito:90,subtotal:6800,vendedor:"Christian Romero",comisionPct:0.05,estadoPago:"Pendiente",montoCobrado:0,estadoComision:"Pendiente"},
-      {numero:"001-002-0000127",cliente:"GAD DMQ",empresa:"SATHIRI",fechaEmision:d(-50),diasCredito:120,subtotal:22000,vendedor:"Christian Romero",comisionPct:0.05,estadoPago:"Pendiente",montoCobrado:0,estadoComision:"Pendiente"},
-      {numero:"001-002-0000128",cliente:"Chaide y Chaide",empresa:"SATMEC",fechaEmision:d(-8),diasCredito:30,subtotal:4100,vendedor:"Vendedor Demo",comisionPct:0.03,estadoPago:"Pendiente",montoCobrado:0,estadoComision:"Pendiente"},
+      {numero:"001-002-0000123",cliente:"EPMMOP",empresa:"SATHIRI",fechaEmision:d(-25),diasCredito:90,subtotal:15000,concepto:"Mantenimiento de áreas verdes Parque La Carolina",vendedor:"Christian Romero",comisionPct:0.05,estadoPago:"Pendiente",montoCobrado:0,estadoComision:"Pendiente"},
+      {numero:"001-002-0000124",cliente:"Chaide y Chaide",empresa:"SATMEC",fechaEmision:d(-40),diasCredito:30,subtotal:8200,concepto:"Construcción de foso metálico 6×1×1.5m",vendedor:"Christian Romero",comisionPct:0.05,estadoPago:"Pagada",fechaCobro:d(-5),montoCobrado:8405,estadoComision:"Pendiente"},
+      {numero:"001-002-0000125",cliente:"Cliente Privado Demo",empresa:"SATMEC",fechaEmision:d(-10),diasCredito:15,subtotal:3500,concepto:"Punto de aire comprimido",vendedor:"Vendedor Demo",comisionPct:0.03,estadoPago:"Parcial",fechaCobro:d(-2),montoCobrado:2000,estadoComision:"Pendiente"},
+      {numero:"001-002-0000126",cliente:"EPMAPS",empresa:"SATHIRI",fechaEmision:d(-120),diasCredito:90,subtotal:6800,concepto:"Adecuación de oficinas",vendedor:"Christian Romero",comisionPct:0.05,estadoPago:"Pendiente",montoCobrado:0,estadoComision:"Pendiente"},
+      {numero:"001-002-0000127",cliente:"GAD DMQ",empresa:"SATHIRI",fechaEmision:d(-50),diasCredito:120,subtotal:22000,concepto:"Infraestructura y mantenimiento",vendedor:"Christian Romero",comisionPct:0.05,estadoPago:"Pendiente",montoCobrado:0,estadoComision:"Pendiente"},
+      {numero:"001-002-0000128",cliente:"Chaide y Chaide",empresa:"SATMEC",fechaEmision:d(-8),diasCredito:30,subtotal:4100,concepto:"Sellado de juntas piso industrial",vendedor:"Vendedor Demo",comisionPct:0.03,estadoPago:"Pendiente",montoCobrado:0,estadoComision:"Pendiente"},
     ]};
 }
 
@@ -834,6 +1147,13 @@ function parseFacturaXml(text){
       let d=+plz.textContent||0; const u=(p.querySelector("unidadTiempo")||{}).textContent||"";
       if(/mes/i.test(u)) d*=30; if(d>dias) dias=d;
     });
+    const items=[];
+    fact.querySelectorAll("detalles detalle").forEach(d=>{
+      const g=t=>{const n=d.querySelector(t);return n?n.textContent.trim():"";};
+      const desc=g("descripcion"); if(!desc) return;
+      items.push({desc, cant:toNum(g("cantidad")), total:toNum(g("precioTotalSinImpuesto"))});
+    });
+    const concepto = items.map(i=>i.desc).join("; ");
     return {
       numero,
       cliente: q("infoFactura razonSocialComprador"),
@@ -842,6 +1162,7 @@ function parseFacturaXml(text){
       fechaEmision: toISO(q("infoFactura fechaEmision")),
       diasCredito: dias,
       subtotal: toNum(q("infoFactura totalSinImpuestos")),
+      concepto, items,
       vendedor: "", comisionPct: 0,
       estadoPago: "Pendiente", montoCobrado: 0, estadoComision: "Pendiente"
     };
@@ -866,8 +1187,8 @@ function importParsed(list){
 
 // ---------- init ----------
 (function init(){
-  if(cfg.url){document.getElementById("cfgUrl").value=cfg.url; loadDemo(); renderAll(); sync();}
-  else { loadDemo(); setConn(false); renderAll(); }
+  if(cfg.url){document.getElementById("cfgUrl").value=cfg.url; loadDemo(); renderAll(); renderVendedores(); sync();}
+  else { loadDemo(); setConn(false); renderAll(); renderVendedores(); }
   if("serviceWorker" in navigator){navigator.serviceWorker.register("service-worker.js").catch(()=>{});}
 })();
 </script>
