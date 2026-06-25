@@ -1,7 +1,7 @@
 // Cartera SATHIRI · SATMEC — Service Worker
 // Sube la versión cada vez que cambie la lógica de caché.
-const CACHE = "cartera-v2";
-const ASSETS = ["./", "./index.html", "./manifest.json", "./icon-192.png", "./icon-512.png"];
+const CACHE = "cartera-v3";
+const ASSETS = ["./", "./index.html", "./manifest.json", "./icon-192.png", "./icon-512.png", "./logo-satmec.png"];
 
 self.addEventListener("install", e => {
   e.waitUntil(
