@@ -1,0 +1,808 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1">
+<meta name="theme-color" content="#14233A">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Cartera">
+<link rel="apple-touch-icon" href="icon-192.png">
+<link rel="manifest" href="manifest.json">
+<title>Cartera · SATHIRI · SATMEC</title>
+<style>
+  :root{
+    --ink:#14233A; --ink2:#22344f; --brand:#2E6FB4; --satmec:#5B6B7B;
+    --ok:#1E8E5A; --warn:#E8862E; --bad:#C8412B;
+    --bg:#EEF1F5; --card:#FFFFFF; --line:#DBE1EA; --muted:#6B7787; --text:#1B2430;
+    --r:14px; --shadow:0 1px 3px rgba(20,35,58,.08),0 1px 2px rgba(20,35,58,.04);
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html,body{margin:0;padding:0}
+  body{
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    background:var(--bg); color:var(--text);
+    font-size:15px; line-height:1.45;
+    padding-bottom:calc(72px + env(safe-area-inset-bottom));
+    -webkit-font-smoothing:antialiased;
+  }
+  .num{font-variant-numeric:tabular-nums;font-feature-settings:"tnum"}
+  .eyebrow{font-size:11px;letter-spacing:.09em;text-transform:uppercase;color:var(--muted);font-weight:700}
+
+  /* ---- Header ---- */
+  header{
+    position:sticky;top:0;z-index:30;background:var(--ink);color:#fff;
+    padding:calc(env(safe-area-inset-top) + 12px) 16px 12px;
+    display:flex;align-items:center;gap:12px;
+  }
+  .logo{
+    width:38px;height:38px;border-radius:10px;background:linear-gradient(160deg,#2E6FB4,#1d4f86);
+    display:grid;place-items:center;font-weight:800;font-size:15px;flex-shrink:0;letter-spacing:.02em
+  }
+  .brand-l1{font-weight:700;font-size:15px;line-height:1.1}
+  .brand-l2{font-size:11px;color:#9fb3cd;letter-spacing:.04em}
+  .sync{margin-left:auto;display:flex;align-items:center;gap:8px}
+  .dot{width:8px;height:8px;border-radius:50%;background:var(--warn)}
+  .dot.on{background:#46d39a}
+  .sync button{
+    background:rgba(255,255,255,.12);border:0;color:#fff;font-size:12px;font-weight:600;
+    padding:7px 11px;border-radius:9px;display:flex;align-items:center;gap:6px
+  }
+  .sync button:active{background:rgba(255,255,255,.22)}
+
+  main{max-width:760px;margin:0 auto;padding:16px}
+  .view{display:none;animation:fade .25s ease}
+  .view.active{display:block}
+  @keyframes fade{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+  h2.section{font-size:13px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin:22px 2px 10px;font-weight:700}
+  h2.section:first-child{margin-top:4px}
+
+  /* ---- KPI cards ---- */
+  .kpis{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  .kpi{background:var(--card);border-radius:var(--r);box-shadow:var(--shadow);padding:14px 14px 13px;position:relative;overflow:hidden}
+  .kpi::before{content:"";position:absolute;left:0;top:0;bottom:0;width:4px;background:var(--brand)}
+  .kpi.ok::before{background:var(--ok)} .kpi.warn::before{background:var(--warn)} .kpi.bad::before{background:var(--bad)}
+  .kpi .lbl{font-size:11.5px;color:var(--muted);font-weight:600;letter-spacing:.02em}
+  .kpi .val{font-size:25px;font-weight:800;letter-spacing:-.01em;margin-top:3px}
+  .kpi .sub{font-size:11px;color:var(--muted);margin-top:1px}
+
+  .card{background:var(--card);border-radius:var(--r);box-shadow:var(--shadow);padding:16px;margin-top:12px}
+  .card .hd{display:flex;align-items:baseline;justify-content:space-between;margin-bottom:12px}
+  .card .hd .t{font-weight:700;font-size:15px}
+  .card .hd .m{font-size:12px;color:var(--muted)}
+
+  /* ---- Aging ribbon (signature) ---- */
+  .ribbon{display:flex;height:34px;border-radius:9px;overflow:hidden;background:#eef1f5}
+  .ribbon span{display:grid;place-items:center;color:#fff;font-size:11px;font-weight:700;min-width:0}
+  .ribbon span small{opacity:.85;font-weight:600}
+  .legend{display:flex;flex-wrap:wrap;gap:10px 16px;margin-top:12px}
+  .legend i{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--muted)}
+  .legend b{width:10px;height:10px;border-radius:3px;display:inline-block}
+
+  /* ---- projection bars ---- */
+  .bars{display:flex;align-items:flex-end;gap:7px;height:120px;padding-top:6px}
+  .bar{flex:1;display:flex;flex-direction:column;align-items:center;gap:6px;height:100%;justify-content:flex-end}
+  .bar .col{width:100%;background:linear-gradient(180deg,#3a82cf,#2E6FB4);border-radius:5px 5px 0 0;min-height:3px;transition:height .4s}
+  .bar .wk{font-size:10px;color:var(--muted);text-align:center;line-height:1.2}
+  .bar .amt{font-size:9.5px;color:var(--ink);font-weight:700}
+
+  /* ---- list rows ---- */
+  .row{display:flex;align-items:center;gap:12px;padding:11px 2px;border-top:1px solid var(--line)}
+  .row:first-child{border-top:0}
+  .row .main{flex:1;min-width:0}
+  .row .name{font-weight:600;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .row .meta{font-size:11.5px;color:var(--muted);margin-top:1px}
+  .row .amt{font-weight:700;text-align:right;white-space:nowrap}
+  .tag{font-size:10px;font-weight:700;padding:2px 7px;border-radius:20px;letter-spacing:.02em}
+  .tag.ok{background:#e2f3ea;color:var(--ok)} .tag.warn{background:#fcefdc;color:#b96510}
+  .tag.bad{background:#fae3df;color:var(--bad)} .tag.dia{background:#e7eefb;color:#235a97}
+  .tag.pend{background:#eef1f5;color:#5a6675}
+
+  .chip{font-size:10px;font-weight:700;padding:2px 6px;border-radius:5px}
+  .chip.sat{background:#e7eefb;color:#235a97}.chip.smc{background:#eceef1;color:#4a5563}
+
+  /* ---- Facturas filters + form ---- */
+  .filters{display:flex;gap:8px;overflow-x:auto;padding:2px 0 10px;-webkit-overflow-scrolling:touch}
+  .filters button{flex:0 0 auto;border:1px solid var(--line);background:#fff;color:var(--muted);
+    padding:7px 13px;border-radius:20px;font-size:12.5px;font-weight:600}
+  .filters button.on{background:var(--ink);color:#fff;border-color:var(--ink)}
+  .fab{position:fixed;right:18px;bottom:calc(84px + env(safe-area-inset-bottom));z-index:25;
+    width:54px;height:54px;border-radius:50%;background:var(--brand);color:#fff;border:0;
+    font-size:28px;line-height:1;box-shadow:0 6px 16px rgba(46,111,180,.42)}
+  .fab:active{transform:scale(.94)}
+
+  /* ---- Informes ---- */
+  .report{display:flex;align-items:center;gap:14px;padding:15px 16px;background:var(--card);
+    border-radius:var(--r);box-shadow:var(--shadow);margin-top:11px;width:100%;border:0;text-align:left;cursor:pointer}
+  .report:active{background:#f7f9fc}
+  .report .ic{width:42px;height:42px;border-radius:11px;background:#eef3fb;display:grid;place-items:center;flex-shrink:0}
+  .report .ic svg{width:22px;height:22px;stroke:var(--brand);fill:none;stroke-width:1.7}
+  .report .tx{flex:1}
+  .report .tx .t{font-weight:700;font-size:14.5px}
+  .report .tx .d{font-size:12px;color:var(--muted);margin-top:1px}
+  .report .arr{color:var(--muted);font-size:20px}
+
+  /* ---- Config ---- */
+  label.field{display:block;margin-top:14px}
+  label.field .l{font-size:12.5px;font-weight:600;color:var(--ink2);margin-bottom:5px;display:block}
+  input,select{width:100%;padding:12px;border:1px solid var(--line);border-radius:11px;font-size:15px;background:#fff;font-family:inherit}
+  input:focus,select:focus{outline:2px solid var(--brand);outline-offset:-1px;border-color:var(--brand)}
+  .btn{width:100%;padding:13px;border:0;border-radius:12px;background:var(--brand);color:#fff;font-weight:700;font-size:15px;margin-top:16px}
+  .btn:active{background:#2660a0}
+  .btn.ghost{background:#eef1f5;color:var(--ink)}
+  .btn.danger{background:#fff;color:var(--bad);border:1px solid #f0c9c2}
+  .btn.danger:active{background:#fae3df}
+  .hint{font-size:12px;color:var(--muted);margin-top:8px;line-height:1.5}
+  .note{background:#fff7ec;border:1px solid #f3dcb6;border-radius:11px;padding:12px;font-size:12.5px;color:#8a5a16;margin-top:14px}
+
+  /* ---- bottom nav ---- */
+  nav{position:fixed;left:0;right:0;bottom:0;z-index:30;background:#fff;border-top:1px solid var(--line);
+    display:flex;padding-bottom:env(safe-area-inset-bottom)}
+  nav button{flex:1;border:0;background:none;padding:9px 0 7px;display:flex;flex-direction:column;align-items:center;gap:3px;color:var(--muted);font-size:10.5px;font-weight:600}
+  nav button svg{width:23px;height:23px;stroke:currentColor;fill:none;stroke-width:1.7}
+  nav button.on{color:var(--brand)}
+
+  /* ---- modal ---- */
+  .modal{position:fixed;inset:0;z-index:50;background:rgba(20,35,58,.45);display:none;align-items:flex-end}
+  .modal.open{display:flex}
+  .sheet{background:#fff;width:100%;max-width:760px;margin:0 auto;border-radius:20px 20px 0 0;
+    padding:8px 18px calc(24px + env(safe-area-inset-bottom));max-height:92vh;overflow-y:auto}
+  .grab{width:38px;height:4px;background:#d3d9e2;border-radius:3px;margin:8px auto 12px}
+  .sheet h3{margin:4px 0 4px;font-size:18px}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  .empty{text-align:center;color:var(--muted);padding:38px 16px;font-size:13.5px}
+
+  /* ---- print / informes ---- */
+  #printArea{display:none}
+  @media print{
+    header,nav,.fab,.view,main{display:none!important}
+    body{background:#fff;padding:0}
+    #printArea{display:block!important;padding:0}
+    @page{margin:14mm}
+  }
+  .pdoc{color:#1B2430;font-size:12px}
+  .pdoc .ph{display:flex;justify-content:space-between;align-items:flex-start;border-bottom:2px solid var(--ink);padding-bottom:10px;margin-bottom:14px}
+  .pdoc .ph .co{font-weight:800;font-size:15px;color:var(--ink)}
+  .pdoc .ph .co small{display:block;font-weight:600;color:var(--satmec);font-size:11px}
+  .pdoc .ph .ti{text-align:right}
+  .pdoc .ph .ti b{font-size:14px}.pdoc .ph .ti span{display:block;font-size:11px;color:#666}
+  .pdoc h4{background:#eef3fb;padding:6px 10px;border-radius:6px;font-size:12px;margin:16px 0 8px}
+  .ptbl{width:100%;border-collapse:collapse;font-size:11px}
+  .ptbl th{background:var(--ink);color:#fff;text-align:left;padding:6px 8px;font-weight:600}
+  .ptbl td{padding:5px 8px;border-bottom:1px solid #e6e9ee}
+  .ptbl tr:nth-child(even) td{background:#f7f9fc}
+  .ptbl .r{text-align:right;font-variant-numeric:tabular-nums}
+  .ptot td{font-weight:800;border-top:2px solid var(--ink);background:#eef3fb!important}
+  .pfoot{margin-top:18px;font-size:10px;color:#8893a2;border-top:1px solid #e6e9ee;padding-top:8px}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">S·S</div>
+  <div>
+    <div class="brand-l1">Cartera</div>
+    <div class="brand-l2">SATHIRI · SATMEC</div>
+  </div>
+  <div class="sync">
+    <span class="dot" id="connDot"></span>
+    <button onclick="sync()"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><path d="M23 4v6h-6M1 20v-6h6"/><path d="M3.5 9a9 9 0 0114.9-3.4L23 10M1 14l4.6 4.4A9 9 0 0020.5 15"/></svg><span id="syncTxt">Sincronizar</span></button>
+  </div>
+</header>
+
+<main>
+  <!-- ============ TABLERO ============ -->
+  <section class="view active" id="v-tablero">
+    <div class="kpis" id="kpiGrid"></div>
+
+    <div class="card">
+      <div class="hd"><div class="t">Antigüedad de cartera</div><div class="m" id="totCartera"></div></div>
+      <div class="ribbon" id="ribbon"></div>
+      <div class="legend" id="ribbonLegend"></div>
+    </div>
+
+    <div class="card">
+      <div class="hd"><div class="t">Cobros esperados</div><div class="m">8 semanas · por vencimiento</div></div>
+      <div class="bars" id="projBars"></div>
+    </div>
+
+    <div class="card">
+      <div class="hd"><div class="t">¿Quién me debe?</div><div class="m">mayor saldo</div></div>
+      <div id="deudores"></div>
+    </div>
+
+    <div class="card">
+      <div class="hd"><div class="t">Comisiones por pagar</div><div class="m">facturas ya cobradas</div></div>
+      <div id="comisiones"></div>
+    </div>
+  </section>
+
+  <!-- ============ FACTURAS ============ -->
+  <section class="view" id="v-facturas">
+    <div class="filters" id="facFilters">
+      <button class="on" data-f="todas">Todas</button>
+      <button data-f="vencidas">Vencidas</button>
+      <button data-f="porvencer">Por vencer</button>
+      <button data-f="pendientes">Pendientes</button>
+      <button data-f="cobradas">Cobradas</button>
+    </div>
+    <div class="card" style="padding:6px 16px"><div id="facList"></div></div>
+  </section>
+
+  <!-- ============ INFORMES ============ -->
+  <section class="view" id="v-informes">
+    <h2 class="section">Informes para imprimir o guardar en PDF</h2>
+    <button class="report" onclick="report('estado')">
+      <div class="ic"><svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><path d="M14 2v6h6M8 13h8M8 17h8M8 9h2"/></svg></div>
+      <div class="tx"><div class="t">Estado de cuenta por cliente</div><div class="d">Facturas y saldo de un cliente</div></div>
+      <div class="arr">›</div>
+    </button>
+    <button class="report" onclick="report('aging')">
+      <div class="ic"><svg viewBox="0 0 24 24"><path d="M3 3v18h18"/><rect x="7" y="12" width="3" height="6"/><rect x="12" y="8" width="3" height="10"/><rect x="17" y="4" width="3" height="14"/></svg></div>
+      <div class="tx"><div class="t">Cartera por antigüedad</div><div class="d">Saldos al día y vencidos por tramo</div></div>
+      <div class="arr">›</div>
+    </button>
+    <button class="report" onclick="report('proyeccion')">
+      <div class="ic"><svg viewBox="0 0 24 24"><path d="M3 17l6-6 4 4 8-8"/><path d="M21 7v6h-6"/></svg></div>
+      <div class="tx"><div class="t">Proyección de cobros</div><div class="d">Flujo esperado semana a semana</div></div>
+      <div class="arr">›</div>
+    </button>
+    <button class="report" onclick="report('comisiones')">
+      <div class="ic"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M9 9.5a2.5 2 0 015 0c0 2-3 1.5-3 3.5M12 17h.01"/></svg></div>
+      <div class="tx"><div class="t">Comisiones por liquidar</div><div class="d">Por vendedor, solo lo ya cobrado</div></div>
+      <div class="arr">›</div>
+    </button>
+    <button class="report" onclick="report('resumen')">
+      <div class="ic"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M7 8h10M7 12h10M7 16h6"/></svg></div>
+      <div class="tx"><div class="t">Resumen general</div><div class="d">Todo en una página</div></div>
+      <div class="arr">›</div>
+    </button>
+    <button class="report" onclick="exportCSV()">
+      <div class="ic"><svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg></div>
+      <div class="tx"><div class="t">Exportar a CSV</div><div class="d">Para abrir en Excel o Sheets</div></div>
+      <div class="arr">›</div>
+    </button>
+
+    <h2 class="section">Subir facturas de Datil</h2>
+    <button class="report" onclick="openImport()">
+      <div class="ic"><svg viewBox="0 0 24 24"><path d="M12 3v12M7 8l5-5 5 5M5 21h14a2 2 0 002-2v-3"/></svg></div>
+      <div class="tx"><div class="t">Importar CSV de Datil</div><div class="d">Sube la exportación de tus comprobantes</div></div>
+      <div class="arr">›</div>
+    </button>
+    <input type="file" id="fileCsv" accept=".csv,text/csv" style="display:none" onchange="onCsvFile(this)">
+    <button class="report" id="undoCard" onclick="undoImport()" style="display:none">
+      <div class="ic" style="background:#fae3df"><svg viewBox="0 0 24 24" stroke="#C8412B"><path d="M3 7v6h6"/><path d="M3 13a9 9 0 103-7.7L3 8"/></svg></div>
+      <div class="tx"><div class="t">Deshacer última importación</div><div class="d">Elimina solo el lote recién subido</div></div>
+      <div class="arr">›</div>
+    </button>
+  </section>
+
+  <!-- ============ CONFIG ============ -->
+  <section class="view" id="v-config">
+    <h2 class="section">Conexión con tus datos</h2>
+    <div class="card">
+      <label class="field"><span class="l">URL del Web App de Google Apps Script</span>
+        <input id="cfgUrl" placeholder="https://script.google.com/macros/s/…/exec" autocomplete="off"></label>
+      <button class="btn" onclick="saveCfg()">Guardar y conectar</button>
+      <button class="btn ghost" onclick="useDemo()">Usar datos de ejemplo</button>
+      <p class="hint">Pega aquí la URL que te da Apps Script al publicar el proyecto como aplicación web. Mientras no la configures, el panel funciona con datos de ejemplo para que veas cómo se comporta.</p>
+      <div class="note">El panel lee y escribe en el mismo Google Sheet de tu control de cartera. Cualquier factura o cobro que registres queda guardado ahí y se refleja también en la versión de Excel.</div>
+    </div>
+    <h2 class="section">Estado</h2>
+    <div class="card"><div id="cfgState" style="font-size:13px;color:var(--muted)"></div></div>
+  </section>
+</main>
+
+<button class="fab" id="fab" onclick="openForm()">+</button>
+
+<nav>
+  <button class="on" data-v="tablero" onclick="go('tablero')"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="9"/><rect x="14" y="3" width="7" height="5"/><rect x="14" y="12" width="7" height="9"/><rect x="3" y="16" width="7" height="5"/></svg>Tablero</button>
+  <button data-v="facturas" onclick="go('facturas')"><svg viewBox="0 0 24 24"><path d="M4 2h12l4 4v16H4z"/><path d="M8 7h6M8 11h8M8 15h8"/></svg>Facturas</button>
+  <button data-v="informes" onclick="go('informes')"><svg viewBox="0 0 24 24"><path d="M9 17v-6M12 17v-3M15 17v-9"/><rect x="3" y="3" width="18" height="18" rx="2"/></svg>Informes</button>
+  <button data-v="config" onclick="go('config')"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 00.3 1.9l.1.1a2 2 0 11-2.8 2.8l-.1-.1a1.7 1.7 0 00-2.9 1.2V22a2 2 0 11-4 0v-.1a1.7 1.7 0 00-2.9-1.2l-.1.1a2 2 0 11-2.8-2.8l.1-.1a1.7 1.7 0 00-1.2-2.9H2a2 2 0 110-4h.1a1.7 1.7 0 001.2-2.9l-.1-.1a2 2 0 112.8-2.8l.1.1a1.7 1.7 0 002.9-1.2V2a2 2 0 114 0v.1a1.7 1.7 0 002.9 1.2l.1-.1a2 2 0 112.8 2.8l-.1.1a1.7 1.7 0 001.2 2.9H22a2 2 0 110 4h-.1a1.7 1.7 0 00-1.5 1z"/></svg>Ajustes</button>
+</nav>
+
+<!-- modal form -->
+<div class="modal" id="modal">
+  <div class="sheet">
+    <div class="grab"></div>
+    <h3 id="modalTitle">Nueva factura</h3>
+    <div id="modalBody"></div>
+  </div>
+</div>
+
+<div id="printArea"></div>
+
+<script>
+"use strict";
+const IVA = 0.15;
+const fmt = n => "$"+(Number(n)||0).toLocaleString("es-EC",{minimumFractionDigits:2,maximumFractionDigits:2});
+const fmt0 = n => "$"+Math.round(Number(n)||0).toLocaleString("es-EC");
+const today = ()=>{const d=new Date();return new Date(d.getFullYear(),d.getMonth(),d.getDate());};
+const pd = s => { if(!s) return null; if(s instanceof Date) return new Date(s.getFullYear(),s.getMonth(),s.getDate());
+  const m=String(s).slice(0,10).split("-"); return m.length===3? new Date(+m[0],+m[1]-1,+m[2]) : null; };
+const fdate = d => d? String(d.getDate()).padStart(2,"0")+"/"+String(d.getMonth()+1).padStart(2,"0")+"/"+d.getFullYear() : "—";
+const addDays=(d,n)=>{const x=new Date(d);x.setDate(x.getDate()+n);return x;};
+const store={ get(k){try{return localStorage.getItem(k)}catch(e){return null}}, set(k,v){try{localStorage.setItem(k,v)}catch(e){}} };
+
+let DATA={facturas:[],clientes:[],vendedores:[]};
+let cfg={url: store.get("cartera_url")||""};
+
+// ---------- enriquecer factura con cálculos ----------
+function calc(f){
+  const sub=+f.subtotal||0;
+  const iva = f.ivaManual!=null && f.ivaManual!=="" ? +f.ivaManual : +(sub*IVA).toFixed(2);
+  const total=+(sub+iva).toFixed(2);
+  const com=+(sub*(+f.comisionPct||0)).toFixed(2);
+  const cobrado=+f.montoCobrado||0;
+  const saldo=+(total-cobrado).toFixed(2);
+  const emis=pd(f.fechaEmision);
+  const venc = emis? addDays(emis,+f.diasCredito||0):null;
+  const t=today();
+  const diasVenc = venc? Math.round((venc-t)/86400000):null;
+  let alerta;
+  if(f.estadoPago==="Anulada") alerta="anulada";
+  else if(saldo<=0.005) alerta="cobrada";
+  else if(!venc) alerta="pendiente";
+  else if(venc<t) alerta="vencida";
+  else if(venc<=addDays(t,7)) alerta="porvencer";
+  else alerta="dia";
+  return {...f,sub,iva,total,com,cobrado,saldo,emis,venc,diasVenc,alerta};
+}
+const rows = ()=>DATA.facturas.map(calc).filter(f=>f.estadoPago!=="Anulada");
+
+// ---------- KPIs ----------
+function renderKPIs(){
+  const r=rows(), t=today();
+  const facturado=r.reduce((a,f)=>a+f.total,0);
+  const cobrado=r.reduce((a,f)=>a+f.cobrado,0);
+  const saldo=r.reduce((a,f)=>a+Math.max(f.saldo,0),0);
+  const vencido=r.filter(f=>f.saldo>0&&f.venc&&f.venc<t).reduce((a,f)=>a+f.saldo,0);
+  const semana=r.filter(f=>f.saldo>0&&f.venc&&f.venc>=t&&f.venc<=addDays(t,7)).reduce((a,f)=>a+f.saldo,0);
+  const comPagar=r.filter(f=>f.estadoPago==="Pagada"&&f.estadoComision!=="Pagada").reduce((a,f)=>a+f.com,0);
+  const k=[
+    ["Saldo por cobrar",fmt0(saldo),r.filter(f=>f.saldo>0).length+" facturas","brand"],
+    ["Vencido",fmt0(vencido),"ya exigible","bad"],
+    ["Entra esta semana",fmt0(semana),"próximos 7 días","ok"],
+    ["Comisión por pagar",fmt0(comPagar),"ya cobradas","warn"],
+  ];
+  document.getElementById("kpiGrid").innerHTML=k.map(([l,v,s,c])=>
+    `<div class="kpi ${c}"><div class="lbl">${l}</div><div class="val num">${v}</div><div class="sub">${s}</div></div>`).join("");
+}
+
+// ---------- aging ribbon ----------
+function renderAging(){
+  const r=rows().filter(f=>f.saldo>0), t=today();
+  const buckets=[
+    ["Al día",0,"#2E6FB4",f=>!f.venc||f.venc>=t],
+    ["1–30",0,"#E8862E",f=>f.venc&&f.venc<t&&(t-f.venc)/86400000<=30],
+    ["31–60",0,"#d9702a",f=>f.venc&&(t-f.venc)/86400000>30&&(t-f.venc)/86400000<=60],
+    ["61–90",0,"#c85a2c",f=>f.venc&&(t-f.venc)/86400000>60&&(t-f.venc)/86400000<=90],
+    ["+90",0,"#C8412B",f=>f.venc&&(t-f.venc)/86400000>90],
+  ];
+  r.forEach(f=>{for(const b of buckets){if(b[3](f)){b[1]+=f.saldo;break;}}});
+  const tot=buckets.reduce((a,b)=>a+b[1],0)||1;
+  document.getElementById("totCartera").textContent=fmt(tot);
+  document.getElementById("ribbon").innerHTML=buckets.filter(b=>b[1]>0).map(b=>{
+    const pct=b[1]/tot*100;
+    return `<span style="flex:${b[1]};background:${b[2]}" title="${b[0]}">${pct>13?Math.round(pct)+"%":""}</span>`;
+  }).join("")||'<span style="flex:1;background:#cdd5df;color:#6b7787">Sin saldos</span>';
+  document.getElementById("ribbonLegend").innerHTML=buckets.map(b=>
+    `<i><b style="background:${b[2]}"></b>${b[0]} · ${fmt0(b[1])}</i>`).join("");
+}
+
+// ---------- proyección ----------
+function projData(){
+  const r=rows().filter(f=>f.saldo>0&&f.venc), t=today(), wk=[];
+  for(let i=0;i<8;i++){
+    const a=addDays(t,i*7), b=addDays(a,6);
+    const amt=r.filter(f=>f.venc>=a&&f.venc<=b).reduce((s,f)=>s+f.saldo,0);
+    wk.push({a,b,amt});
+  } return wk;
+}
+function renderProj(){
+  const wk=projData(), max=Math.max(...wk.map(w=>w.amt),1);
+  document.getElementById("projBars").innerHTML=wk.map((w,i)=>{
+    const h=w.amt/max*100;
+    return `<div class="bar"><div class="amt">${w.amt>0?fmt0(w.amt).replace("$","$"):""}</div>
+      <div class="col" style="height:${Math.max(h,w.amt>0?6:0)}%"></div>
+      <div class="wk">${String(w.a.getDate()).padStart(2,"0")}/${String(w.a.getMonth()+1).padStart(2,"0")}</div></div>`;
+  }).join("");
+}
+
+// ---------- deudores / comisiones ----------
+function renderDeudores(){
+  const r=rows().filter(f=>f.saldo>0), t=today(), by={};
+  r.forEach(f=>{const k=f.cliente||"—"; (by[k]=by[k]||{saldo:0,venc:0,n:0}); by[k].saldo+=f.saldo; by[k].n++; if(f.venc&&f.venc<t)by[k].venc+=f.saldo;});
+  const list=Object.entries(by).sort((a,b)=>b[1].saldo-a[1].saldo).slice(0,6);
+  const el=document.getElementById("deudores");
+  el.innerHTML=list.length? list.map(([c,d])=>
+    `<div class="row"><div class="main"><div class="name">${c}</div>
+      <div class="meta">${d.n} factura(s)${d.venc>0?" · "+fmt0(d.venc)+" vencido":""}</div></div>
+      <div class="amt num">${fmt(d.saldo)}</div>
+      ${d.venc>0?'<span class="tag bad">vencido</span>':'<span class="tag dia">al día</span>'}</div>`).join("")
+    :'<div class="empty">No hay saldos pendientes 🎉</div>';
+}
+function renderComis(){
+  const r=rows().filter(f=>f.estadoPago==="Pagada"&&f.estadoComision!=="Pagada"&&f.com>0), by={};
+  r.forEach(f=>{const k=f.vendedor||"—";(by[k]=by[k]||{c:0,n:0});by[k].c+=f.com;by[k].n++;});
+  const list=Object.entries(by).sort((a,b)=>b[1].c-a[1].c);
+  document.getElementById("comisiones").innerHTML=list.length? list.map(([v,d])=>
+    `<div class="row"><div class="main"><div class="name">${v}</div><div class="meta">${d.n} factura(s) cobrada(s)</div></div>
+      <div class="amt num">${fmt(d.c)}</div><span class="tag warn">por pagar</span></div>`).join("")
+    :'<div class="empty">Nada pendiente por pagar</div>';
+}
+
+// ---------- facturas ----------
+let facFilter="todas";
+function renderFacturas(){
+  const t=today();
+  let r=rows();
+  if(facFilter==="vencidas") r=r.filter(f=>f.alerta==="vencida");
+  else if(facFilter==="porvencer") r=r.filter(f=>f.alerta==="porvencer");
+  else if(facFilter==="pendientes") r=r.filter(f=>f.saldo>0);
+  else if(facFilter==="cobradas") r=r.filter(f=>f.alerta==="cobrada");
+  r.sort((a,b)=>(a.venc?a.venc:9e15)-(b.venc?b.venc:9e15));
+  const tagMap={vencida:["bad","Vencida"],porvencer:["warn","Por vencer"],dia:["dia","Al día"],cobrada:["ok","Cobrada"],pendiente:["pend","Sin fecha"]};
+  const el=document.getElementById("facList");
+  el.innerHTML = r.length? r.map(f=>{
+    const [tc,tt]=tagMap[f.alerta]||["pend",""];
+    const chip=f.empresa==="SATMEC"?'<span class="chip smc">SATMEC</span>':'<span class="chip sat">SATHIRI</span>';
+    const extra = f.alerta==="vencida"? `${Math.abs(f.diasVenc)} d vencida` : f.venc&&f.saldo>0? "vence "+fdate(f.venc):"";
+    return `<div class="row" onclick='openCobro(${JSON.stringify(f.numero)})'>
+      <div class="main"><div class="name">${chip} ${f.cliente||"—"}</div>
+      <div class="meta num">${f.numero} · ${fmt(f.saldo>0?f.saldo:f.total)} ${extra?"· "+extra:""}</div></div>
+      <span class="tag ${tc}">${tt}</span></div>`;
+  }).join("") : '<div class="empty">No hay facturas en este filtro.<br>Toca + para registrar una.</div>';
+}
+
+// ---------- modal: nueva factura ----------
+function openForm(){
+  go("facturas");
+  const cOpts=DATA.clientes.map(c=>`<option value="${c.nombre}">`).join("");
+  const vOpts=DATA.vendedores.map(v=>`<option value="${v.nombre}">`).join("");
+  document.getElementById("modalTitle").textContent="Nueva factura";
+  document.getElementById("modalBody").innerHTML=`
+    <datalist id="dlC">${cOpts}</datalist><datalist id="dlV">${vOpts}</datalist>
+    <label class="field"><span class="l">N° de factura (de Datil)</span><input id="i_num" placeholder="001-002-000000123"></label>
+    <div class="grid2">
+      <label class="field"><span class="l">Cliente</span><input id="i_cli" list="dlC"></label>
+      <label class="field"><span class="l">Empresa</span><select id="i_emp"><option>SATHIRI</option><option>SATMEC</option></select></label>
+    </div>
+    <div class="grid2">
+      <label class="field"><span class="l">Fecha emisión</span><input id="i_fec" type="date" value="${new Date().toISOString().slice(0,10)}"></label>
+      <label class="field"><span class="l">Días crédito</span><input id="i_dias" type="number" value="30" inputmode="numeric"></label>
+    </div>
+    <label class="field"><span class="l">Subtotal (sin IVA)</span><input id="i_sub" type="number" inputmode="decimal" placeholder="0.00"></label>
+    <div class="grid2">
+      <label class="field"><span class="l">Vendedor</span><input id="i_ven" list="dlV"></label>
+      <label class="field"><span class="l">% comisión</span><input id="i_com" type="number" inputmode="decimal" placeholder="5"></label>
+    </div>
+    <button class="btn" onclick="saveFactura()">Guardar factura</button>
+    <button class="btn ghost" onclick="closeModal()">Cancelar</button>`;
+  openModal();
+}
+function saveFactura(){
+  const g=id=>document.getElementById(id).value;
+  if(!g("i_num")||!g("i_sub")){alert("Pon al menos el N° y el subtotal.");return;}
+  const v=DATA.vendedores.find(x=>x.nombre===g("i_ven"));
+  const f={numero:g("i_num"),cliente:g("i_cli"),empresa:g("i_emp"),fechaEmision:g("i_fec"),
+    diasCredito:+g("i_dias")||0,subtotal:+g("i_sub")||0,vendedor:g("i_ven"),
+    comisionPct: g("i_com")? (+g("i_com")/100) : (v? v.pct:0),
+    estadoPago:"Pendiente",montoCobrado:0,estadoComision:"Pendiente"};
+  DATA.facturas.push(f);
+  push("upsertFactura",f);
+  closeModal(); renderAll(); go("facturas");
+}
+// ---------- modal: registrar cobro ----------
+function openCobro(numero){
+  const f=DATA.facturas.find(x=>x.numero===numero); if(!f)return;
+  const c=calc(f);
+  document.getElementById("modalTitle").textContent="Factura "+numero;
+  document.getElementById("modalBody").innerHTML=`
+    <div class="row" style="border:0"><div class="main">
+      <div class="name">${f.cliente||"—"}</div>
+      <div class="meta">Total ${fmt(c.total)} · Saldo ${fmt(c.saldo)} · vence ${fdate(c.venc)}</div></div></div>
+    <label class="field"><span class="l">Estado de pago</span>
+      <select id="c_est"><option ${f.estadoPago==="Pendiente"?"selected":""}>Pendiente</option>
+      <option ${f.estadoPago==="Parcial"?"selected":""}>Parcial</option>
+      <option ${f.estadoPago==="Pagada"?"selected":""}>Pagada</option>
+      <option ${f.estadoPago==="Anulada"?"selected":""}>Anulada</option></select></label>
+    <div class="grid2">
+      <label class="field"><span class="l">Fecha de cobro</span><input id="c_fec" type="date" value="${f.fechaCobro||""}"></label>
+      <label class="field"><span class="l">Monto cobrado</span><input id="c_mon" type="number" inputmode="decimal" value="${f.montoCobrado||""}"></label>
+    </div>
+    <label class="field"><span class="l">Comisión al vendedor (${fmt(c.com)})</span>
+      <select id="c_com"><option ${f.estadoComision!=="Pagada"?"selected":""}>Pendiente</option>
+      <option ${f.estadoComision==="Pagada"?"selected":""}>Pagada</option></select></label>
+    <button class="btn" onclick='saveCobro(${JSON.stringify(numero)})'>Guardar cambios</button>
+    <button class="btn ghost" onclick="closeModal()">Cerrar</button>
+    <button class="btn danger" onclick='deleteFactura(${JSON.stringify(numero)})'>Eliminar factura</button>`;
+  openModal();
+}
+function deleteFactura(numero){
+  const f=DATA.facturas.find(x=>x.numero===numero); if(!f)return;
+  if(!confirm(`¿Eliminar la factura ${numero}${f.cliente?" de "+f.cliente:""}?\n\nEsto la quita del panel y del Sheet. No se puede deshacer.`)) return;
+  DATA.facturas=DATA.facturas.filter(x=>x.numero!==numero);
+  push("eliminarFactura",{numero});
+  closeModal(); renderAll();
+}
+function saveCobro(numero){
+  const f=DATA.facturas.find(x=>x.numero===numero); if(!f)return;
+  const g=id=>document.getElementById(id).value;
+  f.estadoPago=g("c_est"); f.fechaCobro=g("c_fec"); f.montoCobrado=+g("c_mon")||0; f.estadoComision=g("c_com");
+  if(f.estadoPago==="Pagada"&&!f.montoCobrado) f.montoCobrado=calc(f).total;
+  push("registrarCobro",f);
+  closeModal(); renderAll();
+}
+
+// ---------- backend (Apps Script) ----------
+function setConn(on){document.getElementById("connDot").classList.toggle("on",on);
+  document.getElementById("cfgState").innerHTML = on
+    ? `✓ Conectado al Web App.<br><span class="num">${DATA.facturas.length}</span> facturas cargadas.`
+    : "Sin conectar — mostrando datos de ejemplo. Pega tu URL en Ajustes para usar tus datos reales.";}
+async function sync(){
+  if(!cfg.url){go("config");return;}
+  const txt=document.getElementById("syncTxt"); txt.textContent="…";
+  try{
+    const res=await fetch(cfg.url+"?action=getData",{method:"GET"});
+    const j=await res.json();
+    if(j.facturas){DATA=j; setConn(true);} else throw 0;
+    renderAll();
+  }catch(e){ alert("No se pudo conectar. Revisa la URL del Web App y que esté publicado para «Cualquier usuario»."); setConn(false);}
+  txt.textContent="Sincronizar";
+}
+function push(action,payload){
+  if(!cfg.url) return; // modo demo: solo en memoria
+  fetch(cfg.url,{method:"POST",headers:{"Content-Type":"text/plain;charset=utf-8"},
+    body:JSON.stringify({action,payload})}).catch(()=>{});
+}
+function saveCfg(){
+  cfg.url=document.getElementById("cfgUrl").value.trim();
+  store.set("cartera_url",cfg.url);
+  sync();
+}
+function useDemo(){ loadDemo(); setConn(false); renderAll(); go("tablero"); }
+
+// ---------- navegación ----------
+function go(v){
+  document.querySelectorAll(".view").forEach(s=>s.classList.toggle("active",s.id==="v-"+v));
+  document.querySelectorAll("nav button").forEach(b=>b.classList.toggle("on",b.dataset.v===v));
+  document.getElementById("fab").style.display = (v==="facturas"||v==="tablero")?"block":"none";
+  window.scrollTo(0,0);
+}
+function openModal(){document.getElementById("modal").classList.add("open");}
+function closeModal(){document.getElementById("modal").classList.remove("open");}
+document.getElementById("modal").addEventListener("click",e=>{if(e.target.id==="modal")closeModal();});
+document.getElementById("facFilters").addEventListener("click",e=>{
+  const b=e.target.closest("button"); if(!b)return;
+  document.querySelectorAll("#facFilters button").forEach(x=>x.classList.remove("on"));
+  b.classList.add("on"); facFilter=b.dataset.f; renderFacturas();
+});
+
+function renderAll(){renderKPIs();renderAging();renderProj();renderDeudores();renderComis();renderFacturas();}
+
+// ============ INFORMES (impresión) ============
+const MEMBRETE = (titulo,sub)=>`<div class="ph">
+  <div class="co">SATHIRI PROYECTOS INTEGRALES<small>SATMEC PROYECTOS INDUSTRIALES</small></div>
+  <div class="ti"><b>${titulo}</b><span>${sub||""}</span><span>Emitido: ${fdate(today())}</span></div></div>`;
+const PFOOT = `<div class="pfoot">Documento generado por el panel de cartera SATHIRI · SATMEC. Valores referenciales sujetos a conciliación contable.</div>`;
+function printDoc(html){document.getElementById("printArea").innerHTML=`<div class="pdoc">${html}</div>`;setTimeout(()=>window.print(),60);}
+
+function report(type){
+  if(type==="estado"){
+    const cli=prompt("¿Estado de cuenta de qué cliente?\n\n"+[...new Set(rows().map(f=>f.cliente))].join("\n"));
+    if(!cli)return;
+    const r=rows().filter(f=>(f.cliente||"").toLowerCase()===cli.toLowerCase());
+    if(!r.length){alert("Sin facturas para ese cliente.");return;}
+    const saldo=r.reduce((a,f)=>a+Math.max(f.saldo,0),0);
+    printDoc(MEMBRETE("Estado de cuenta","Cliente: "+cli)+
+      `<table class="ptbl"><tr><th>Factura</th><th>Emisión</th><th>Vence</th><th class="r">Total</th><th class="r">Cobrado</th><th class="r">Saldo</th><th>Estado</th></tr>
+      ${r.map(f=>`<tr><td>${f.numero}</td><td>${fdate(f.emis)}</td><td>${fdate(f.venc)}</td>
+        <td class="r">${fmt(f.total)}</td><td class="r">${fmt(f.cobrado)}</td><td class="r">${fmt(Math.max(f.saldo,0))}</td>
+        <td>${({vencida:"Vencida",porvencer:"Por vencer",dia:"Al día",cobrada:"Cobrada",pendiente:"Pendiente"})[f.alerta]}</td></tr>`).join("")}
+      <tr class="ptot"><td colspan="5">SALDO PENDIENTE</td><td class="r">${fmt(saldo)}</td><td></td></tr></table>`+PFOOT);
+  }
+  else if(type==="aging"){
+    const t=today(), r=rows().filter(f=>f.saldo>0);
+    const B=[["Al día",f=>!f.venc||f.venc>=t],["1–30",f=>f.venc&&f.venc<t&&(t-f.venc)/864e5<=30],
+      ["31–60",f=>(t-f.venc)/864e5>30&&(t-f.venc)/864e5<=60],["61–90",f=>(t-f.venc)/864e5>60&&(t-f.venc)/864e5<=90],
+      ["+90 días",f=>(t-f.venc)/864e5>90]];
+    const byCli={};
+    r.forEach(f=>{const k=f.cliente||"—";byCli[k]=byCli[k]||B.map(()=>0);
+      for(let i=0;i<B.length;i++){if(B[i][1](f)){byCli[k][i]+=f.saldo;break;}}});
+    const tot=B.map(()=>0); Object.values(byCli).forEach(a=>a.forEach((v,i)=>tot[i]+=v));
+    printDoc(MEMBRETE("Cartera por antigüedad","Saldos pendientes por tramo de vencimiento")+
+      `<table class="ptbl"><tr><th>Cliente</th>${B.map(b=>`<th class="r">${b[0]}</th>`).join("")}<th class="r">Total</th></tr>
+      ${Object.entries(byCli).sort((a,b)=>b[1].reduce((x,y)=>x+y,0)-a[1].reduce((x,y)=>x+y,0)).map(([c,a])=>
+        `<tr><td>${c}</td>${a.map(v=>`<td class="r">${v>0?fmt(v):"—"}</td>`).join("")}<td class="r">${fmt(a.reduce((x,y)=>x+y,0))}</td></tr>`).join("")}
+      <tr class="ptot"><td>TOTAL</td>${tot.map(v=>`<td class="r">${fmt(v)}</td>`).join("")}<td class="r">${fmt(tot.reduce((x,y)=>x+y,0))}</td></tr></table>`+PFOOT);
+  }
+  else if(type==="proyeccion"){
+    const wk=projData(), tot=wk.reduce((a,w)=>a+w.amt,0);
+    printDoc(MEMBRETE("Proyección de cobros","Flujo esperado · próximas 8 semanas")+
+      `<table class="ptbl"><tr><th>Semana</th><th>Desde</th><th>Hasta</th><th class="r">Cobro esperado</th></tr>
+      ${wk.map((w,i)=>`<tr><td>Semana ${i+1}</td><td>${fdate(w.a)}</td><td>${fdate(w.b)}</td><td class="r">${fmt(w.amt)}</td></tr>`).join("")}
+      <tr class="ptot"><td colspan="3">TOTAL 8 SEMANAS</td><td class="r">${fmt(tot)}</td></tr></table>`+PFOOT);
+  }
+  else if(type==="comisiones"){
+    const r=rows().filter(f=>f.estadoPago==="Pagada"&&f.estadoComision!=="Pagada"&&f.com>0), by={};
+    r.forEach(f=>{const k=f.vendedor||"—";by[k]=by[k]||[];by[k].push(f);});
+    let tot=0;
+    const blocks=Object.entries(by).map(([v,fs])=>{
+      const st=fs.reduce((a,f)=>a+f.com,0); tot+=st;
+      return `<h4>${v} — ${fmt(st)}</h4><table class="ptbl"><tr><th>Factura</th><th>Cliente</th><th class="r">Subtotal</th><th class="r">%</th><th class="r">Comisión</th></tr>
+      ${fs.map(f=>`<tr><td>${f.numero}</td><td>${f.cliente}</td><td class="r">${fmt(f.sub)}</td><td class="r">${(f.comisionPct*100).toFixed(1)}%</td><td class="r">${fmt(f.com)}</td></tr>`).join("")}</table>`;
+    }).join("");
+    printDoc(MEMBRETE("Comisiones por liquidar","Solo facturas ya cobradas")+
+      (blocks||"<p>No hay comisiones pendientes.</p>")+
+      `<table class="ptbl"><tr class="ptot"><td>TOTAL A PAGAR</td><td class="r">${fmt(tot)}</td></tr></table>`+PFOOT);
+  }
+  else if(type==="resumen"){
+    const r=rows(),t=today();
+    const saldo=r.reduce((a,f)=>a+Math.max(f.saldo,0),0);
+    const venc=r.filter(f=>f.saldo>0&&f.venc&&f.venc<t).reduce((a,f)=>a+f.saldo,0);
+    const fact=r.reduce((a,f)=>a+f.total,0), cob=r.reduce((a,f)=>a+f.cobrado,0);
+    const com=r.filter(f=>f.estadoPago==="Pagada"&&f.estadoComision!=="Pagada").reduce((a,f)=>a+f.com,0);
+    printDoc(MEMBRETE("Resumen general de cartera","")+
+      `<table class="ptbl">
+      <tr><td>Total facturado</td><td class="r">${fmt(fact)}</td></tr>
+      <tr><td>Total cobrado</td><td class="r">${fmt(cob)}</td></tr>
+      <tr><td>Saldo por cobrar</td><td class="r">${fmt(saldo)}</td></tr>
+      <tr><td>De ese saldo, vencido</td><td class="r">${fmt(venc)}</td></tr>
+      <tr><td>Comisiones por pagar (cobradas)</td><td class="r">${fmt(com)}</td></tr>
+      <tr><td>Facturas con saldo</td><td class="r">${r.filter(f=>f.saldo>0).length}</td></tr></table>`+PFOOT);
+  }
+}
+function exportCSV(){
+  const head=["N Factura","Cliente","RUC","Empresa","Emision","Vence","Subtotal","IVA","Total","Vendedor","%Com","Comision","EstadoPago","FechaCobro","Cobrado","Saldo","EstadoComision","Alerta"];
+  const lines=rows().map(f=>[f.numero,f.cliente,f.ruc||"",f.empresa,fdate(f.emis),fdate(f.venc),f.sub,f.iva,f.total,f.vendedor||"",
+    (f.comisionPct*100).toFixed(1),f.com,f.estadoPago,f.fechaCobro||"",f.cobrado,Math.max(f.saldo,0),f.estadoComision||"",f.alerta]
+    .map(x=>`"${String(x).replace(/"/g,'""')}"`).join(","));
+  const csv="\uFEFF"+[head.join(","),...lines].join("\n");
+  const a=document.createElement("a");
+  a.href=URL.createObjectURL(new Blob([csv],{type:"text/csv"}));
+  a.download="cartera_"+today().toISOString().slice(0,10)+".csv"; a.click();
+}
+
+// ---------- demo ----------
+function loadDemo(){
+  const d=n=>{const x=new Date();x.setDate(x.getDate()+n);return x.toISOString().slice(0,10);};
+  DATA={
+    clientes:[{nombre:"EPMMOP",ruc:"1768153920001"},{nombre:"EPMAPS",ruc:"1768152560001"},
+      {nombre:"GAD DMQ",ruc:"1760003410001"},{nombre:"Chaide y Chaide",ruc:"1790016919001"},
+      {nombre:"Cliente Privado Demo",ruc:"0900000000001"}],
+    vendedores:[{nombre:"Christian Romero",pct:0.05},{nombre:"Vendedor Demo",pct:0.03}],
+    facturas:[
+      {numero:"001-002-0000123",cliente:"EPMMOP",empresa:"SATHIRI",fechaEmision:d(-25),diasCredito:90,subtotal:15000,vendedor:"Christian Romero",comisionPct:0.05,estadoPago:"Pendiente",montoCobrado:0,estadoComision:"Pendiente"},
+      {numero:"001-002-0000124",cliente:"Chaide y Chaide",empresa:"SATMEC",fechaEmision:d(-40),diasCredito:30,subtotal:8200,vendedor:"Christian Romero",comisionPct:0.05,estadoPago:"Pagada",fechaCobro:d(-5),montoCobrado:9430,estadoComision:"Pendiente"},
+      {numero:"001-002-0000125",cliente:"Cliente Privado Demo",empresa:"SATMEC",fechaEmision:d(-10),diasCredito:15,subtotal:3500,vendedor:"Vendedor Demo",comisionPct:0.03,estadoPago:"Parcial",fechaCobro:d(-2),montoCobrado:2000,estadoComision:"Pendiente"},
+      {numero:"001-002-0000126",cliente:"EPMAPS",empresa:"SATHIRI",fechaEmision:d(-120),diasCredito:90,subtotal:6800,vendedor:"Christian Romero",comisionPct:0.05,estadoPago:"Pendiente",montoCobrado:0,estadoComision:"Pendiente"},
+      {numero:"001-002-0000127",cliente:"GAD DMQ",empresa:"SATHIRI",fechaEmision:d(-50),diasCredito:120,subtotal:22000,vendedor:"Christian Romero",comisionPct:0.05,estadoPago:"Pendiente",montoCobrado:0,estadoComision:"Pendiente"},
+      {numero:"001-002-0000128",cliente:"Chaide y Chaide",empresa:"SATMEC",fechaEmision:d(-8),diasCredito:30,subtotal:4100,vendedor:"Vendedor Demo",comisionPct:0.03,estadoPago:"Pendiente",montoCobrado:0,estadoComision:"Pendiente"},
+    ]};
+}
+
+// ============ IMPORTAR DESDE DATIL (CSV) ============
+let _rows=null,_head=null;
+function openImport(){ document.getElementById("fileCsv").click(); }
+function onCsvFile(input){
+  const f=input.files[0]; if(!f)return;
+  const rd=new FileReader();
+  rd.onload=()=>{ try{parseCsv(rd.result);}catch(e){alert("No pude leer el archivo. ¿Es un CSV?");} input.value=""; };
+  rd.readAsText(f,"UTF-8");
+}
+function parseCsv(txt){
+  txt=txt.replace(/^\uFEFF/,"");
+  const rows=[]; let i=0,field="",row=[],q=false;
+  // detectar separador: coma o punto y coma
+  const firstLine=txt.slice(0,txt.indexOf("\n")>0?txt.indexOf("\n"):txt.length);
+  const sep=(firstLine.split(";").length>firstLine.split(",").length)?";":",";
+  while(i<txt.length){const c=txt[i];
+    if(q){ if(c==='"'){ if(txt[i+1]==='"'){field+='"';i++;} else q=false; } else field+=c; }
+    else { if(c==='"')q=true; else if(c===sep){row.push(field);field="";}
+      else if(c==="\n"){row.push(field);rows.push(row);row=[];field="";}
+      else if(c==="\r"){} else field+=c; }
+    i++;
+  }
+  if(field!==""||row.length){row.push(field);rows.push(row);}
+  const ne=rows.filter(r=>r.some(x=>String(x).trim()!==""));
+  if(ne.length<2){alert("El archivo no tiene filas de datos.");return;}
+  _head=ne[0].map(h=>String(h).trim()); _rows=ne.slice(1);
+  showMapping();
+}
+function guess(keys){
+  for(let i=0;i<_head.length;i++){const h=_head[i].toLowerCase();
+    if(keys.some(k=>h.includes(k)))return i;}
+  return -1;
+}
+function selOpts(sel){ return _head.map((h,i)=>`<option value="${i}" ${i===sel?"selected":""}>${h||"(columna "+(i+1)+")"}</option>`).join(""); }
+function showMapping(){
+  const m={
+    num:guess(["secuencial","número","numero","factura","comprobante","documento"]),
+    cli:guess(["razón social","razon social","cliente","comprador","nombre"]),
+    ruc:guess(["ruc","identificac","cédula","cedula","ident"]),
+    fec:guess(["fecha de emis","fecha emis","emisión","emision","fecha"]),
+    sub:guess(["sin impuesto","subtotal","base imp","base"]),
+    tot:guess(["importe","total"]),
+    venc:guess(["vencim","crédito","credito"]),
+  };
+  document.getElementById("modalTitle").textContent="Importar de Datil";
+  const fields=[
+    ["num","N° de factura",true],["cli","Cliente",true],["ruc","RUC / identificación",false],
+    ["fec","Fecha de emisión",true],["sub","Subtotal (sin IVA)",true],["tot","Total (si no hay subtotal)",false],
+    ["venc","Fecha de vencimiento",false],
+  ];
+  document.getElementById("modalBody").innerHTML=`
+    <p class="hint">Detecté <b>${_rows.length}</b> filas. Confirma a qué columna corresponde cada dato. Las que no apliquen, déjalas en "—".</p>
+    ${fields.map(([k,l,req])=>`<label class="field"><span class="l">${l}${req?"":" (opcional)"}</span>
+      <select id="map_${k}"><option value="-1">—</option>${selOpts(m[k])}</select></label>`).join("")}
+    <label class="field"><span class="l">Asignar todas a un vendedor (opcional)</span>
+      <select id="map_ven"><option value="">—</option>${DATA.vendedores.map(v=>`<option>${v.nombre}</option>`).join("")}</select></label>
+    <button class="btn" onclick="doImport()">Importar ${_rows.length} facturas</button>
+    <button class="btn ghost" onclick="closeModal()">Cancelar</button>`;
+  openModal();
+}
+function toNum(s){ if(s==null||s==="")return 0;
+  s=String(s).replace(/[^0-9.,-]/g,""); if(!s)return 0;
+  const lc=s.lastIndexOf(","), ld=s.lastIndexOf(".");
+  if(lc>-1&&ld>-1){ s = lc>ld ? s.replace(/\./g,"").replace(",",".") : s.replace(/,/g,""); }
+  else if(lc>-1){ s = (s.length-lc-1)===3 ? s.replace(/,/g,"") : s.replace(",","."); }
+  return +s||0; }
+function toISO(s){ if(!s)return ""; s=String(s).trim();
+  let m=s.match(/^(\d{4})-(\d{2})-(\d{2})/); if(m)return m[1]+"-"+m[2]+"-"+m[3];
+  m=s.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})/); if(m)return m[3]+"-"+String(m[2]).padStart(2,"0")+"-"+String(m[1]).padStart(2,"0");
+  return ""; }
+function doImport(){
+  const gi=id=>+document.getElementById("map_"+id).value;
+  const C={num:gi("num"),cli:gi("cli"),ruc:gi("ruc"),fec:gi("fec"),sub:gi("sub"),tot:gi("tot"),venc:gi("venc")};
+  const ven=document.getElementById("map_ven").value;
+  const vpct=(DATA.vendedores.find(v=>v.nombre===ven)||{}).pct||0;
+  const exist=new Set(DATA.facturas.map(f=>String(f.numero)));
+  let add=0,dup=0; const added=[];
+  _rows.forEach(r=>{
+    const numero=C.num>=0?String(r[C.num]).trim():"";
+    if(!numero){return;}
+    if(exist.has(numero)){dup++;return;}
+    const fec=toISO(C.fec>=0?r[C.fec]:"");
+    const venc=toISO(C.venc>=0?r[C.venc]:"");
+    let sub=C.sub>=0?toNum(r[C.sub]):0;
+    if(!sub && C.tot>=0) sub=+(toNum(r[C.tot])/1.15).toFixed(2); // estimar subtotal desde el total
+    let dias=0; if(fec&&venc){ dias=Math.round((pd(venc)-pd(fec))/86400000); if(dias<0)dias=0; }
+    const f={numero,cliente:C.cli>=0?String(r[C.cli]).trim():"",ruc:C.ruc>=0?String(r[C.ruc]).trim():"",
+      empresa:"SATHIRI",fechaEmision:fec,diasCredito:dias,subtotal:sub,
+      vendedor:ven||"",comisionPct:vpct,estadoPago:"Pendiente",montoCobrado:0,estadoComision:"Pendiente"};
+    DATA.facturas.push(f); exist.add(numero); add++; added.push(numero);
+    push("upsertFactura",f);
+  });
+  _lastImport = added;
+  updateUndoCard();
+  closeModal(); renderAll(); go("facturas");
+  alert(`Importadas ${add} facturas nuevas.${dup?` Se omitieron ${dup} que ya existían.`:""}`+
+    (add&&!ven?"\n\nRevisa el vendedor y los días de crédito si hace falta.":"")+
+    (add?"\n\nSi el lote salió mal, usa «Deshacer última importación» en Informes.":""));
+}
+let _lastImport=[];
+function updateUndoCard(){
+  const c=document.getElementById("undoCard");
+  if(c) c.style.display = _lastImport.length ? "flex" : "none";
+}
+function undoImport(){
+  if(!_lastImport.length){alert("No hay una importación reciente para deshacer.");return;}
+  if(!confirm(`¿Deshacer la última importación de ${_lastImport.length} facturas?\n\nSe eliminarán solo esas facturas.`))return;
+  const set=new Set(_lastImport.map(String));
+  DATA.facturas=DATA.facturas.filter(f=>!set.has(String(f.numero)));
+  _lastImport.forEach(numero=>push("eliminarFactura",{numero}));
+  _lastImport=[]; updateUndoCard(); renderAll();
+  alert("Importación deshecha.");
+}
+
+// ---------- init ----------
+(function init(){
+  if(cfg.url){document.getElementById("cfgUrl").value=cfg.url; loadDemo(); renderAll(); sync();}
+  else { loadDemo(); setConn(false); renderAll(); }
+  if("serviceWorker" in navigator){navigator.serviceWorker.register("service-worker.js").catch(()=>{});}
+})();
+</script>
+</body>
+</html>
