@@ -242,6 +242,12 @@
   .cli-list{max-height:46vh;overflow:auto;display:flex;flex-direction:column;gap:6px}
   .cli-item{text-align:left;padding:13px 14px;border:1px solid var(--line);border-radius:11px;background:var(--card);font-size:14px;font-weight:600;cursor:pointer}
   .cli-item:active{background:#eef4ff}
+  #pinGate{position:fixed;inset:0;z-index:200;background:linear-gradient(160deg,#0B1E45,#0a1838);display:grid;place-items:center;padding:24px}
+  .pinbox{background:#fff;border-radius:18px;padding:28px 24px;width:100%;max-width:320px;text-align:center;box-shadow:0 20px 60px rgba(0,0,0,.4)}
+  .pinbox .pin-t{font-weight:700;color:var(--ink);margin-bottom:14px;font-size:15px}
+  .pinbox input{width:100%;padding:13px;border:1px solid var(--line);border-radius:11px;font-size:18px;text-align:center;letter-spacing:.3em;box-sizing:border-box;margin-bottom:12px}
+  .pinbox button{width:100%;padding:13px;border:0;border-radius:11px;background:var(--accent);color:#fff;font-size:15px;font-weight:700;cursor:pointer}
+  .pinbox .pin-err{color:var(--bad);font-size:12.5px;margin-top:10px;min-height:16px}
   .empty{text-align:center;color:var(--muted);padding:38px 16px;font-size:13.5px}
   .detalle{background:#f6f8fb;border:1px solid var(--line);border-radius:11px;padding:10px 12px;margin:8px 0 4px}
   .detalle .dt-h{font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);font-weight:700;margin-bottom:6px}
@@ -404,6 +410,12 @@
       <div class="arr">›</div>
     </button>
     <input type="file" id="fileXml" accept=".xml,text/xml,application/xml" multiple style="display:none" onchange="onXmlFiles(this)">
+    <button class="report" onclick="document.getElementById('fileRet').click()">
+      <div class="ic"><svg viewBox="0 0 24 24"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg></div>
+      <div class="tx"><div class="t">Importar retenciones (XML)</div><div class="d">Se relacionan solas con su factura</div></div>
+      <div class="arr">›</div>
+    </button>
+    <input type="file" id="fileRet" accept=".xml,text/xml,application/xml" multiple style="display:none" onchange="onRetFiles(this)">
     <button class="report" onclick="document.getElementById('fileCsv').click()">
       <div class="ic"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 3v18"/></svg></div>
       <div class="tx"><div class="t">Importar CSV de Datil</div><div class="d">Solo si no tienes los XML</div></div>
@@ -471,8 +483,18 @@ const fdate = d => d? String(d.getDate()).padStart(2,"0")+"/"+String(d.getMonth(
 const addDays=(d,n)=>{const x=new Date(d);x.setDate(x.getDate()+n);return x;};
 const store={ get(k){try{return localStorage.getItem(k)}catch(e){return null}}, set(k,v){try{localStorage.setItem(k,v)}catch(e){}} };
 
+// ════════ CONFIGURACIÓN DEL EQUIPO ════════
+// 1) Pega aquí entre comillas la URL /exec de tu Web App. Así, cualquiera que
+//    abra el panel queda conectado automáticamente, sin tener que configurarla.
+const DEFAULT_WEBAPP = "https://script.google.com/macros/s/AKfycbxM2BQR4aNOt8Ua41aHqhkT4vaCGTX8NgorI6HRPibNRi_iDdgy9pNafJbvqMQxFQcn/exec";
+// 2) PIN de acceso. Si lo dejas vacío "", el panel abre directo (sin pedir clave).
+//    Si pones un PIN (ej. "2580"), el panel lo pedirá al abrir. Compártelo solo
+//    con tu equipo. (Es un filtro básico, no una clave bancaria — ver nota abajo.)
+const ACCESO_PIN = "";
+// ═══════════════════════════════════════════
+
 let DATA={facturas:[],clientes:[],vendedores:[],pagos:[]};
-let cfg={url: store.get("cartera_url")||""};
+let cfg={url: store.get("cartera_url") || DEFAULT_WEBAPP || ""};
 const DEF_RENTA = 0.02;   // 2% renta sobre subtotal (editable por factura)
 const DEF_IVA   = 0.70;   // 70% del IVA (editable por factura)
 
@@ -1454,6 +1476,55 @@ function onXmlFiles(input){
     input.value="";
   });
 }
+
+// ============ IMPORTAR RETENCIONES (XML) ============
+function onRetFiles(input){
+  const files=[...input.files]; if(!files.length)return;
+  Promise.all(files.map(f=>f.text().catch(()=>""))).then(texts=>{
+    aplicarRetenciones(texts.map(parseRetencionXml));
+    input.value="";
+  });
+}
+function parseRetencionXml(text){
+  if(!text) return null;
+  try{
+    const dp=new DOMParser();
+    let doc=dp.parseFromString(text,"application/xml");
+    const comp=doc.querySelector("comprobante");
+    if(comp && /comprobanteRetencion/i.test(comp.textContent)) doc=dp.parseFromString(comp.textContent,"application/xml");
+    const root=doc.querySelector("comprobanteRetencion");
+    if(!root) return null;
+    const g=sel=>{const n=root.querySelector(sel);return n?n.textContent.trim():"";};
+    const estab=g("infoTributaria estab"), pto=g("infoTributaria ptoEmi"), sec=g("infoTributaria secuencial");
+    const numRet=(estab&&pto&&sec)?`${estab}-${pto}-${sec}`:"";
+    const fecha=toISO(g("infoCompRetencion fechaEmision"));
+    // documento sustento (la factura): numDocSustento = 15 dígitos (estab+ptoEmi+secuencial)
+    let facturaNum="";
+    const nd=root.querySelector("numDocSustento");
+    if(nd){ const d=nd.textContent.replace(/\D/g,""); if(d.length>=15) facturaNum=`${d.slice(0,3)}-${d.slice(3,6)}-${d.slice(6,15)}`; }
+    // total retenido = suma de todos los valores retenidos
+    let total=0; root.querySelectorAll("valorRetenido").forEach(v=>total+=toNum(v.textContent));
+    return { numRet, fecha, facturaNum, totalRetenido:+total.toFixed(2) };
+  }catch(e){ return null; }
+}
+function aplicarRetenciones(list){
+  let ok=0, dup=0, nomatch=0, bad=0; const sinFactura=[];
+  list.forEach(r=>{
+    if(!r || !r.facturaNum || !r.totalRetenido){ bad++; return; }
+    const f=DATA.facturas.find(x=>String(x.numero)===String(r.facturaNum));
+    if(!f){ nomatch++; sinFactura.push(r.facturaNum); return; }
+    if(f.retReal!=null && f.retReal!==""){ dup++; return; }   // ya tenía retención: no se pisa
+    f.retReal=r.totalRetenido; f.retNum=r.numRet;
+    push("registrarCobro",f);
+    ok++;
+  });
+  renderAll();
+  let msg=`Retenciones aplicadas: ${ok}.`;
+  if(dup) msg+=`\n${dup} factura(s) ya tenían retención (se omitieron para no duplicar).`;
+  if(nomatch) msg+=`\n${nomatch} no coinciden con ninguna factura cargada${sinFactura.length?": "+sinFactura.slice(0,5).join(", ")+(sinFactura.length>5?"…":""):""}.`;
+  if(bad) msg+=`\n${bad} archivo(s) no eran retenciones válidas.`;
+  alert(msg);
+}
 function parseFacturaXml(text){
   if(!text) return null;
   try{
@@ -1521,10 +1592,37 @@ async function importParsed(list){
   }
 }
 
+// ---------- control de acceso (PIN) ----------
+function pedirAcceso(){
+  if(!ACCESO_PIN) return true;                          // sin PIN configurado: acceso libre
+  if(store.get("cartera_ok")==="1") return true;        // ya validó en este dispositivo
+  const ov=document.createElement("div");
+  ov.id="pinGate";
+  ov.innerHTML=`<div class="pinbox">
+    <img src="logo-satmec.png" alt="SATMEC" style="width:160px;margin-bottom:14px">
+    <div class="pin-t">Acceso al panel de cartera</div>
+    <input id="pinInput" type="password" inputmode="numeric" placeholder="PIN" autocomplete="off">
+    <button onclick="validarPin()">Entrar</button>
+    <div id="pinErr" class="pin-err"></div>
+  </div>`;
+  document.body.appendChild(ov);
+  setTimeout(()=>{const i=document.getElementById("pinInput");if(i){i.focus();i.onkeydown=e=>{if(e.key==="Enter")validarPin();};}},100);
+  return false;
+}
+function validarPin(){
+  const v=(document.getElementById("pinInput").value||"").trim();
+  if(v===ACCESO_PIN){ store.set("cartera_ok","1"); document.getElementById("pinGate").remove(); arrancar(); }
+  else { document.getElementById("pinErr").textContent="PIN incorrecto."; }
+}
+
+function arrancar(){
+  if(cfg.url){const u=document.getElementById("cfgUrl"); if(u)u.value=cfg.url; loadDemo(); renderAll(); renderVendedores(); sync();}
+  else { loadDemo(); setConn(false); renderAll(); renderVendedores(); }
+}
+
 // ---------- init ----------
 (function init(){
-  if(cfg.url){document.getElementById("cfgUrl").value=cfg.url; loadDemo(); renderAll(); renderVendedores(); sync();}
-  else { loadDemo(); setConn(false); renderAll(); renderVendedores(); }
+  if(pedirAcceso()) arrancar();
   if("serviceWorker" in navigator){
     const hadController = !!navigator.serviceWorker.controller;
     navigator.serviceWorker.register("service-worker.js").then(reg=>{ try{reg.update();}catch(e){} }).catch(()=>{});
