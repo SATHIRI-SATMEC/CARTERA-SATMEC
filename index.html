@@ -525,6 +525,7 @@ const ACCESO_PIN = "";
 let DATA={facturas:[],clientes:[],vendedores:[],pagos:[]};
 let cfg={url: store.get("cartera_url") || DEFAULT_WEBAPP || ""};
 const DEF_RENTA = 0.02;   // 2% renta sobre subtotal (editable por factura)
+const numKey = s => +String(s||"").replace(/\D/g,"") || 0;   // ordena por número de factura
 const DEF_IVA   = 0.70;   // 70% del IVA (editable por factura)
 
 // ---------- enriquecer factura con cálculos ----------
@@ -668,6 +669,7 @@ function renderComis(){
 // ---------- facturas ----------
 let facFilter="todas";
 let facSearch="";
+let _cobroEmis="";
 function facBuscar(q){ facSearch=(q||"").toLowerCase().trim(); renderFacturas(); }
 function renderFacturas(){
   const t=today();
@@ -683,7 +685,7 @@ function renderFacturas(){
   if(facSearch){
     r=r.filter(f=>((f.cliente||"")+" "+(f.proyecto||"")+" "+(f.numero||"")+" "+(f.concepto||"")).toLowerCase().includes(facSearch));
   }
-  r.sort((a,b)=>(a.venc?a.venc:9e15)-(b.venc?b.venc:9e15));
+  r.sort((a,b)=>numKey(b.numero)-numKey(a.numero));
   const tagMap={vencida:["bad","Vencida"],porvencer:["warn","Por vencer"],dia:["dia","Al día"],cobrada:["ok","Cobrada"],pendiente:["pend","Sin fecha"],anulada:["pend","Anulada"]};
   const el=document.getElementById("facList");
   el.innerHTML = r.length? r.map(f=>{
@@ -865,6 +867,11 @@ function openCobro(numero){
       <div class="meta">Emitida ${fdate(c.emis)} · Subtotal ${fmt(c.sub)} · IVA ${fmt(c.iva)} · Total ${fmt(c.total)} · vence ${fdate(c.venc)}</div></div></div>
     ${detalle}
     <label class="field"><span class="l">Proyecto / obra</span><input id="c_proy" placeholder="Ej. Piso epóxico bodega 3" value="${(f.proyecto||"").replace(/"/g,'&quot;')}"></label>
+    <label class="field"><span class="l">Días de crédito</span><input id="c_dias" type="number" inputmode="numeric" value="${f.diasCredito||0}" oninput="calcVencCobro()"></label>
+    <div class="diaschips">
+      ${[8,10,15,20,30,45,60,90].map(d=>`<button type="button" class="dchip" onclick="setDiasCobro(${d})">${d} días</button>`).join("")}
+      <span id="vencCalcC" class="venc-calc"></span>
+    </div>
     ${antAplicadoDe(numero)>0.05?`<div class="retbox" style="background:#eafaf1;border-color:#bfe6cf">✓ Anticipo aplicado a esta factura: <b>${fmt(antAplicadoDe(numero))}</b></div>`:""}
 
     <div class="ret">
@@ -905,7 +912,18 @@ function openCobro(numero){
     <button class="btn ghost" onclick="closeModal()">Cerrar</button>
     <button class="btn danger" onclick='deleteFactura(${JSON.stringify(numero)})'>Eliminar factura</button>`;
   retPrev(numero);
+  _cobroEmis = f.fechaEmision || "";
   openModal();
+  calcVencCobro();
+}
+function setDiasCobro(d){ const el=document.getElementById("c_dias"); if(el){ el.value=d; calcVencCobro(); } }
+function calcVencCobro(){
+  const out=document.getElementById("vencCalcC"); if(!out)return;
+  const di=document.getElementById("c_dias");
+  if(!_cobroEmis||!di){ out.textContent=""; return; }
+  const base=new Date(_cobroEmis+"T00:00:00");
+  base.setDate(base.getDate()+(+di.value||0));
+  out.innerHTML=`Se cobra el <b>${fdate(base.getTime())}</b>`;
 }
 // recalcula y muestra el desglose en vivo dentro del modal de factura
 function retPrev(numero){
@@ -948,6 +966,7 @@ function saveCobro(numero){
   f.retNum=g("c_rnum");
   f.estadoPago=g("c_est"); f.fechaCobro=g("c_fec"); f.montoCobrado=+g("c_mon")||0; f.estadoComision=g("c_com");
   if(document.getElementById("c_proy")) f.proyecto=g("c_proy");
+  if(document.getElementById("c_dias")) f.diasCredito=+g("c_dias")||0;
   if(f.estadoPago==="Pagada"&&!f.montoCobrado) f.montoCobrado=calc(f).deposito;
   push("registrarCobro",f);
   closeModal(); renderAll();
@@ -1334,7 +1353,7 @@ function renderRetenciones(){
   let list=r.slice();
   if(retFilter==="con") list=list.filter(tieneReal);
   else if(retFilter==="faltan") list=list.filter(f=>!tieneReal(f));
-  list.sort((a,b)=>(b.emis||0)-(a.emis||0));
+  list.sort((a,b)=>numKey(b.numero)-numKey(a.numero));
 
   // totales arriba
   const proy=r.reduce((a,f)=>a+(f.retRenta+f.retIva),0);
