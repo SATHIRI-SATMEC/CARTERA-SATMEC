@@ -237,6 +237,7 @@
   .row.sel{cursor:pointer}
   .row.sel .f_chk{width:20px;height:20px;flex:0 0 auto;margin-right:4px}
   .row.on{background:#eef4ff}
+  .row{-webkit-user-select:none;user-select:none;cursor:pointer}
   .reticon{display:inline-block;font-size:10.5px;font-weight:700;color:var(--ok);background:#eafaf1;border:1px solid #bfe6cf;border-radius:6px;padding:1px 6px;margin-left:4px;vertical-align:middle}
   .diaschips{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin:-4px 0 12px}
   .dchip{padding:7px 11px;border:1px solid var(--line);border-radius:999px;background:var(--card);font-size:13px;font-weight:600;cursor:pointer}
@@ -697,14 +698,14 @@ function renderFacturas(){
     const meta = `${f.numero} · ${fmt(f.saldo>0?f.saldo:f.total)}${emis?" · "+emis:""}${extra?" · "+extra:""}`;
     const concepto = f.concepto? `<div class="concepto">${f.proyecto?`<b>[${f.proyecto}]</b> `:""}${f.concepto}</div>` : (f.proyecto?`<div class="concepto"><b>[${f.proyecto}]</b></div>`:"");
     if(selMode){
-      return `<div class="row sel" onclick="toggleSel(${JSON.stringify(f.numero)},this)">
-        <input type="checkbox" class="f_chk" data-num="${f.numero}" onclick="event.stopPropagation();syncSel()">
+      return `<div class="row sel" data-num="${f.numero}">
+        <input type="checkbox" class="f_chk" data-num="${f.numero}">
         <div class="main"><div class="name">${chip} ${f.cliente||"—"} ${retIco}</div>
         ${concepto}
         <div class="meta num">${meta}</div></div>
         <span class="tag ${tc}">${tt}</span></div>`;
     }
-    return `<div class="row" onclick='openCobro(${JSON.stringify(f.numero)})'>
+    return `<div class="row" data-num="${f.numero}">
       <div class="main"><div class="name">${chip} ${f.cliente||"—"} ${retIco}</div>
       ${concepto}
       <div class="meta num">${meta}</div></div>
@@ -834,9 +835,10 @@ function saveFactura(){
 // ---------- modal: registrar cobro ----------
 function movimientosDe(numero){
   const out=[];
-  (DATA.pagos||[]).forEach(p=>(p.aplicaciones||[]).forEach(a=>{
-    if(String(a.numero)===String(numero)) out.push({fecha:p.fecha, tipo:p.tipo||"Pago", aplicado:+a.aplicado||0, comprobante:p.comprobante||""});
-  }));
+  (DATA.pagos||[]).forEach(p=>{
+    const aps=Array.isArray(p.aplicaciones)?p.aplicaciones:[];
+    aps.forEach(a=>{ if(String(a.numero)===String(numero)) out.push({fecha:p.fecha, tipo:p.tipo||"Pago", aplicado:+a.aplicado||0, comprobante:p.comprobante||""}); });
+  });
   return out.sort((a,b)=>new Date(a.fecha)-new Date(b.fecha));
 }
 function histMovimientos(f){
@@ -850,6 +852,7 @@ function histMovimientos(f){
     <div class="dt-row" style="border-top:2px solid #e6ebf1;font-weight:700"><span>Total recibido</span><b>${fmt(+f.montoCobrado||0)}</b></div></div>`;
 }
 function openCobro(numero){
+  try{
   const f=DATA.facturas.find(x=>x.numero===numero); if(!f)return;
   const c=calc(f);
   let detalle="";
@@ -915,6 +918,7 @@ function openCobro(numero){
   _cobroEmis = f.fechaEmision || "";
   openModal();
   calcVencCobro();
+  }catch(err){ alert("No se pudo abrir la factura: "+err.message); }
 }
 function setDiasCobro(d){ const el=document.getElementById("c_dias"); if(el){ el.value=d; calcVencCobro(); } }
 function calcVencCobro(){
@@ -1136,13 +1140,13 @@ function anticipoDe(cliente){
   let recibido=0, aplicado=0;
   ps.forEach(p=>{
     recibido += +p.monto||0;
-    (p.aplicaciones||[]).forEach(a=>aplicado += +a.aplicado||0);
+    (Array.isArray(p.aplicaciones)?p.aplicaciones:[]).forEach(a=>aplicado += +a.aplicado||0);
   });
   return { recibido, aplicado, disponible:+(recibido-aplicado).toFixed(2) };
 }
 function antAplicadoDe(numero){
   let t=0;
-  (DATA.pagos||[]).forEach(p=>(p.aplicaciones||[]).forEach(a=>{ if(String(a.numero)===String(numero)) t+=+a.aplicado||0; }));
+  (DATA.pagos||[]).forEach(p=>(Array.isArray(p.aplicaciones)?p.aplicaciones:[]).forEach(a=>{ if(String(a.numero)===String(numero)) t+=+a.aplicado||0; }));
   return +t.toFixed(2);
 }
 function totalAnticiposDisponibles(){
@@ -1223,17 +1227,20 @@ function savePago(){
 
 // ---------- listado / borrado de pagos ----------
 function openPagosList(){
+  try{
   closeModal();
   const pagos=(DATA.pagos||[]).slice().reverse();
   document.getElementById("modalTitle").textContent="Pagos registrados";
   document.getElementById("modalBody").innerHTML = pagos.length
     ? pagos.map(p=>{
-        const n=(p.aplicaciones&&p.aplicaciones.length)||(p.facturas&&p.facturas.length)||0;
-        const det = p.aplicaciones&&p.aplicaciones.length
-          ? p.aplicaciones.map(a=>`${a.numero} (${fmt(a.aplicado)})`).join(", ")
-          : (p.facturas||[]).join(", ");
+        const aps=Array.isArray(p.aplicaciones)?p.aplicaciones:[];
+        const facs=Array.isArray(p.facturas)?p.facturas:[];
+        const n=aps.length||facs.length||0;
+        const det = aps.length
+          ? aps.map(a=>`${a.numero} (${fmt(a.aplicado)})`).join(", ")
+          : facs.join(", ");
         return `<div class="pgo">
-          <div class="pgo-top"><b>${fmt(p.monto)}</b><span>${p.tipo} · ${fdate(p.fecha)}</span></div>
+          <div class="pgo-top"><b>${fmt(p.monto)}</b><span>${p.tipo||"Pago"} · ${fdate(p.fecha)}</span></div>
           <div class="pgo-cli">${p.cliente||"—"}${p.proyecto?" · "+p.proyecto:""}${p.comprobante?" · "+p.comprobante:""}</div>
           <div class="pgo-det">${n?det:"sin aplicar (anticipo)"}</div>
           ${p.notas?`<div class="pgo-det">${p.notas}</div>`:""}
@@ -1243,6 +1250,7 @@ function openPagosList(){
     : '<div class="empty">Aún no has registrado pagos.</div>';
   document.getElementById("modalBody").innerHTML+=`<button class="btn ghost" onclick="closeModal()">Cerrar</button>`;
   openModal();
+  }catch(err){ alert("No se pudo abrir la lista de pagos: "+err.message); }
 }
 function deletePago(id){
   const p=(DATA.pagos||[]).find(x=>x.id===id); if(!p)return;
@@ -1266,13 +1274,29 @@ function setConn(on){document.getElementById("connDot").classList.toggle("on",on
   document.getElementById("cfgState").innerHTML = on
     ? `✓ Conectado al Web App.<br><span class="num">${DATA.facturas.length}</span> facturas cargadas.`
     : "Sin conectar — mostrando datos de ejemplo. Pega tu URL en Ajustes para usar tus datos reales.";}
+
+// Garantiza que los datos tengan la forma esperada (evita errores al abrir facturas o pagos)
+function normalizeData(){
+  if(!DATA||typeof DATA!=="object") DATA={};
+  ["facturas","clientes","vendedores","pagos"].forEach(k=>{ if(!Array.isArray(DATA[k])) DATA[k]=[]; });
+  DATA.pagos.forEach(p=>{
+    if(!Array.isArray(p.aplicaciones)){
+      // reconstruye desde "facturas" si vienen como "num:monto"
+      const facs=Array.isArray(p.facturas)?p.facturas:[];
+      p.aplicaciones=facs.map(t=>{ const x=String(t).split(":"); return {numero:x[0], aplicado:Number(x[1])||0}; });
+    }
+    if(!Array.isArray(p.facturas)) p.facturas=p.aplicaciones.map(a=>a.numero);
+  });
+  DATA.facturas.forEach(f=>{ if(!Array.isArray(f.items)) f.items=[]; });
+}
+
 async function sync(){
   if(!cfg.url){go("config");return;}
   const txt=document.getElementById("syncTxt"); txt.textContent="…";
   try{
     const res=await fetch(cfg.url+"?action=getData",{method:"GET"});
     const j=await res.json();
-    if(j.facturas){DATA=j; setConn(true);} else throw 0;
+    if(j.facturas){DATA=j; normalizeData(); setConn(true);} else throw 0;
     renderAll(); renderVendedores();
   }catch(e){ alert("No se pudo conectar. Revisa la URL del Web App y que esté publicado para «Cualquier usuario»."); setConn(false);}
   txt.textContent="Sincronizar";
@@ -1361,6 +1385,18 @@ document.getElementById("facFilters").addEventListener("click",e=>{
   const b=e.target.closest("button"); if(!b)return;
   document.querySelectorAll("#facFilters button").forEach(x=>x.classList.remove("on"));
   b.classList.add("on"); facFilter=b.dataset.f; renderFacturas();
+});
+// abrir / seleccionar factura (por delegación: funciona aunque el texto sea largo)
+document.getElementById("facList").addEventListener("click",e=>{
+  const row=e.target.closest(".row"); if(!row)return;
+  const num=row.dataset.num; if(num==null)return;
+  if(selMode){
+    const c=row.querySelector(".f_chk");
+    if(c && e.target!==c) c.checked=!c.checked;
+    syncSel();
+  } else {
+    openCobro(num);
+  }
 });
 document.getElementById("retFilters").addEventListener("click",e=>{
   const b=e.target.closest("button"); if(!b)return;
@@ -1557,6 +1593,7 @@ function loadDemo(){
       {numero:"001-002-0000127",cliente:"GAD DMQ",empresa:"SATHIRI",fechaEmision:d(-50),diasCredito:120,subtotal:22000,concepto:"Infraestructura y mantenimiento",vendedor:"Christian Romero",comisionPct:0.05,estadoPago:"Pendiente",montoCobrado:0,estadoComision:"Pendiente"},
       {numero:"001-002-0000128",cliente:"Chaide y Chaide",empresa:"SATMEC",fechaEmision:d(-8),diasCredito:30,subtotal:4100,concepto:"Sellado de juntas piso industrial",vendedor:"Vendedor Demo",comisionPct:0.03,estadoPago:"Pendiente",montoCobrado:0,estadoComision:"Pendiente"},
     ]};
+  normalizeData();
 }
 
 // ============ IMPORTAR DESDE DATIL (CSV) ============
