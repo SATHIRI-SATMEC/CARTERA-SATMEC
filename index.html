@@ -1084,8 +1084,28 @@ function openAnticipo(id){
     <label class="field"><span class="l">N° comprobante (opcional)</span><input id="a_comp" placeholder="transferencia / cheque" value="${v('comprobante')}"></label>
     <label class="field"><span class="l">Notas (opcional)</span><input id="a_notas" placeholder="" value="${v('notas')}"></label>
     <button class="btn" onclick="saveAnticipo(${id?JSON.stringify(id):'null'})">${ed?"Guardar cambios":"Guardar anticipo"}</button>
+    ${ed?`<button class="btn danger" onclick="deleteAnticipo(${JSON.stringify(id)})">Eliminar anticipo</button>`:""}
     <button class="btn ghost" onclick="closeModal()">Cancelar</button>`;
   openModal();
+}
+function deleteAnticipo(id){
+  const p=(DATA.pagos||[]).find(x=>x.id===id); if(!p)return;
+  const aplicado=(p.aplicaciones||[]).reduce((a,x)=>a+(+x.aplicado||0),0);
+  let msg=`¿Eliminar el anticipo de ${fmt(p.monto)}${p.proyecto?" ("+p.proyecto+")":""}?`;
+  if(aplicado>0.05) msg+=`\n\nYa se habían aplicado ${fmt(aplicado)} a facturas; se revertirá ese cobro.`;
+  if(!confirm(msg)) return;
+  const reversos=[];
+  (p.aplicaciones||[]).forEach(a=>{
+    const f=DATA.facturas.find(x=>x.numero===a.numero); if(!f)return;
+    const nuevoCobrado=Math.max(0, +(((+f.montoCobrado||0)-(+a.aplicado||0))).toFixed(2));
+    const dep=calc(f).deposito;
+    const estado = nuevoCobrado<=0.005 ? "Pendiente" : (nuevoCobrado>=dep-0.005 ? "Pagada" : "Parcial");
+    f.montoCobrado=nuevoCobrado; f.estadoPago=estado;
+    reversos.push({numero:a.numero, montoCobrado:nuevoCobrado, estadoPago:estado, fechaCobro:f.fechaCobro||""});
+  });
+  DATA.pagos=(DATA.pagos||[]).filter(x=>x.id!==id);
+  push("eliminarPago",{id, reversos});
+  closeModal(); renderAll();
 }
 function saveAnticipo(id){
   const g=x=>(document.getElementById(x).value||"").trim();
