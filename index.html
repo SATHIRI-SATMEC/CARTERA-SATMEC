@@ -509,7 +509,14 @@ const fmt0 = n => "$"+Math.round(Number(n)||0).toLocaleString("es-EC");
 const today = ()=>{const d=new Date();return new Date(d.getFullYear(),d.getMonth(),d.getDate());};
 const pd = s => { if(!s) return null; if(s instanceof Date) return new Date(s.getFullYear(),s.getMonth(),s.getDate());
   const m=String(s).slice(0,10).split("-"); return m.length===3? new Date(+m[0],+m[1]-1,+m[2]) : null; };
-const fdate = d => d? String(d.getDate()).padStart(2,"0")+"/"+String(d.getMonth()+1).padStart(2,"0")+"/"+d.getFullYear() : "—";
+const fdate = d => {
+  if(d===null||d===undefined||d==="") return "—";
+  let x = d;
+  if(typeof d==="string") x = pd(d);
+  else if(typeof d==="number") x = new Date(d);
+  if(!(x instanceof Date) || isNaN(x.getTime())) return "—";
+  return String(x.getDate()).padStart(2,"0")+"/"+String(x.getMonth()+1).padStart(2,"0")+"/"+x.getFullYear();
+};
 const addDays=(d,n)=>{const x=new Date(d);x.setDate(x.getDate()+n);return x;};
 const store={ get(k){try{return localStorage.getItem(k)}catch(e){return null}}, set(k,v){try{localStorage.setItem(k,v)}catch(e){}} };
 
