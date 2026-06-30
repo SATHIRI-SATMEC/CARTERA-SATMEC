@@ -356,6 +356,7 @@
       <button data-f="cobradas">Cobradas</button>
       <button data-f="anuladas">Anuladas</button>
     </div>
+    <input id="facSearch" class="cli-search" placeholder="Buscar por cliente, proyecto o N° de factura…" autocomplete="off" oninput="facBuscar(this.value)" style="margin:0 0 10px">
     <div class="selrow">
       <button class="btn ghost sm selbtn" id="selToggle" style="margin:0" onclick="toggleSelMode()">☑ Seleccionar</button>
       <div id="selActions" style="display:none">
@@ -639,6 +640,8 @@ function renderComis(){
 
 // ---------- facturas ----------
 let facFilter="todas";
+let facSearch="";
+function facBuscar(q){ facSearch=(q||"").toLowerCase().trim(); renderFacturas(); }
 function renderFacturas(){
   const t=today();
   let r=DATA.facturas.map(calc);
@@ -649,6 +652,9 @@ function renderFacturas(){
     else if(facFilter==="porvencer") r=r.filter(f=>f.alerta==="porvencer");
     else if(facFilter==="pendientes") r=r.filter(f=>f.saldo>0);
     else if(facFilter==="cobradas") r=r.filter(f=>f.alerta==="cobrada");
+  }
+  if(facSearch){
+    r=r.filter(f=>((f.cliente||"")+" "+(f.proyecto||"")+" "+(f.numero||"")+" "+(f.concepto||"")).toLowerCase().includes(facSearch));
   }
   r.sort((a,b)=>(a.venc?a.venc:9e15)-(b.venc?b.venc:9e15));
   const tagMap={vencida:["bad","Vencida"],porvencer:["warn","Por vencer"],dia:["dia","Al día"],cobrada:["ok","Cobrada"],pendiente:["pend","Sin fecha"],anulada:["pend","Anulada"]};
