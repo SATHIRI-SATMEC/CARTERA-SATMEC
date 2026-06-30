@@ -238,6 +238,11 @@
   .row.sel .f_chk{width:20px;height:20px;flex:0 0 auto;margin-right:4px}
   .row.on{background:#eef4ff}
   .reticon{display:inline-block;font-size:10.5px;font-weight:700;color:var(--ok);background:#eafaf1;border:1px solid #bfe6cf;border-radius:6px;padding:1px 6px;margin-left:4px;vertical-align:middle}
+  .diaschips{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin:-4px 0 12px}
+  .dchip{padding:7px 11px;border:1px solid var(--line);border-radius:999px;background:var(--card);font-size:13px;font-weight:600;cursor:pointer}
+  .dchip:active{background:var(--brand);color:#fff;border-color:var(--brand)}
+  .venc-calc{font-size:12.5px;color:var(--muted);margin-left:auto}
+  .venc-calc b{color:var(--ink)}
   .selbtn{display:inline-flex;align-items:center;gap:5px;font-weight:700}
   .btn.ok{background:var(--ok);color:#fff}
   .cli-search{width:100%;padding:12px;border:1px solid var(--line);border-radius:11px;font-size:15px;margin-bottom:10px;box-sizing:border-box}
@@ -785,8 +790,12 @@ function openForm(){
       <label class="field"><span class="l">Empresa</span><select id="i_emp"><option>SATHIRI</option><option>SATMEC</option></select></label>
     </div>
     <div class="grid2">
-      <label class="field"><span class="l">Fecha emisión</span><input id="i_fec" type="date" value="${new Date().toISOString().slice(0,10)}"></label>
-      <label class="field"><span class="l">Días crédito</span><input id="i_dias" type="number" value="30" inputmode="numeric"></label>
+      <label class="field"><span class="l">Fecha emisión</span><input id="i_fec" type="date" value="${new Date().toISOString().slice(0,10)}" onchange="calcVenc()"></label>
+      <label class="field"><span class="l">Días crédito</span><input id="i_dias" type="number" value="30" inputmode="numeric" oninput="calcVenc()"></label>
+    </div>
+    <div class="diaschips">
+      ${[8,10,15,20,30,45,60,90].map(d=>`<button type="button" class="dchip" onclick="setDias(${d})">${d} días</button>`).join("")}
+      <span id="vencCalc" class="venc-calc"></span>
     </div>
     <label class="field"><span class="l">Subtotal (sin IVA)</span><input id="i_sub" type="number" inputmode="decimal" placeholder="0.00"></label>
     <label class="field"><span class="l">Concepto / detalle (de qué es)</span><input id="i_con" placeholder="Ej. Construcción de foso metálico"></label>
@@ -797,7 +806,16 @@ function openForm(){
     </div>
     <button class="btn" onclick="saveFactura()">Guardar factura</button>
     <button class="btn ghost" onclick="closeModal()">Cancelar</button>`;
-  openModal();
+  openModal(); calcVenc();
+}
+function setDias(d){ const el=document.getElementById("i_dias"); if(el){ el.value=d; calcVenc(); } }
+function calcVenc(){
+  const out=document.getElementById("vencCalc"); if(!out)return;
+  const fe=document.getElementById("i_fec"), di=document.getElementById("i_dias");
+  if(!fe||!di||!fe.value){ out.textContent=""; return; }
+  const base=new Date(fe.value+"T00:00:00");
+  base.setDate(base.getDate()+(+di.value||0));
+  out.innerHTML=`Se cobra el <b>${fdate(base.getTime())}</b>`;
 }
 function saveFactura(){
   const g=id=>document.getElementById(id).value;
