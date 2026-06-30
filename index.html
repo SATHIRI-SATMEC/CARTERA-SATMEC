@@ -237,6 +237,7 @@
   .row.sel{cursor:pointer}
   .row.sel .f_chk{width:20px;height:20px;flex:0 0 auto;margin-right:4px}
   .row.on{background:#eef4ff}
+  .reticon{display:inline-block;font-size:10.5px;font-weight:700;color:var(--ok);background:#eafaf1;border:1px solid #bfe6cf;border-radius:6px;padding:1px 6px;margin-left:4px;vertical-align:middle}
   .selbtn{display:inline-flex;align-items:center;gap:5px;font-weight:700}
   .btn.ok{background:var(--ok);color:#fff}
   .cli-search{width:100%;padding:12px;border:1px solid var(--line);border-radius:11px;font-size:15px;margin-bottom:10px;box-sizing:border-box}
@@ -286,6 +287,7 @@
   <div class="slogo"><img src="logo-satmec.png" alt="SATMEC"></div>
   <button class="on" data-v="tablero" onclick="go('tablero')"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="9"/><rect x="14" y="3" width="7" height="5"/><rect x="14" y="12" width="7" height="9"/><rect x="3" y="16" width="7" height="5"/></svg>Tablero</button>
   <button data-v="facturas" onclick="go('facturas')"><svg viewBox="0 0 24 24"><path d="M4 2h12l4 4v16H4z"/><path d="M8 7h6M8 11h8M8 15h8"/></svg>Facturas</button>
+  <button data-v="retenciones" onclick="go('retenciones')"><svg viewBox="0 0 24 24"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg>Retenciones</button>
   <button data-v="informes" onclick="go('informes')"><svg viewBox="0 0 24 24"><path d="M9 17v-6M12 17v-3M15 17v-9"/><rect x="3" y="3" width="18" height="18" rx="2"/></svg>Informes</button>
   <button data-v="config" onclick="go('config')"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 00.3 1.9l.1.1a2 2 0 11-2.8 2.8l-.1-.1a1.7 1.7 0 00-2.9 1.2V22a2 2 0 11-4 0v-.1a1.7 1.7 0 00-2.9-1.2l-.1.1a2 2 0 11-2.8-2.8l.1-.1a1.7 1.7 0 00-1.2-2.9H2a2 2 0 110-4h.1a1.7 1.7 0 001.2-2.9l-.1-.1a2 2 0 112.8-2.8l.1.1a1.7 1.7 0 002.9-1.2V2a2 2 0 114 0v.1a1.7 1.7 0 002.9 1.2l.1-.1a2 2 0 112.8 2.8l-.1.1a1.7 1.7 0 001.2 2.9H22a2 2 0 110 4h-.1a1.7 1.7 0 00-1.5 1z"/></svg>Ajustes</button>
   <div class="sfoot">Cartera · Proyectos Industriales</div>
@@ -369,6 +371,25 @@
       </div>
     </div>
     <div class="card" style="padding:6px 16px"><div id="facList"></div></div>
+  </section>
+
+  <!-- ============ RETENCIONES ============ -->
+  <section class="view" id="v-retenciones">
+    <div class="card resumen">
+      <div class="hd"><div class="t">Retenciones</div><div class="m" id="retMeta"></div></div>
+      <div id="retTotales"></div>
+    </div>
+    <button class="report" onclick="document.getElementById('fileRet').click()">
+      <div class="ic"><svg viewBox="0 0 24 24"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg></div>
+      <div class="tx"><div class="t">Importar retenciones (XML)</div><div class="d">Se relacionan solas con su factura</div></div>
+      <div class="arr">›</div>
+    </button>
+    <div class="filters" id="retFilters">
+      <button class="on" data-rf="todas">Todas</button>
+      <button data-rf="con">Con retención</button>
+      <button data-rf="faltan">Faltan</button>
+    </div>
+    <div class="card" style="padding:6px 16px"><div id="retList"></div></div>
   </section>
 
   <!-- ============ INFORMES ============ -->
@@ -458,6 +479,7 @@
 <nav>
   <button class="on" data-v="tablero" onclick="go('tablero')"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="9"/><rect x="14" y="3" width="7" height="5"/><rect x="14" y="12" width="7" height="9"/><rect x="3" y="16" width="7" height="5"/></svg>Tablero</button>
   <button data-v="facturas" onclick="go('facturas')"><svg viewBox="0 0 24 24"><path d="M4 2h12l4 4v16H4z"/><path d="M8 7h6M8 11h8M8 15h8"/></svg>Facturas</button>
+  <button data-v="retenciones" onclick="go('retenciones')"><svg viewBox="0 0 24 24"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg>Retenc.</button>
   <button data-v="informes" onclick="go('informes')"><svg viewBox="0 0 24 24"><path d="M9 17v-6M12 17v-3M15 17v-9"/><rect x="3" y="3" width="18" height="18" rx="2"/></svg>Informes</button>
   <button data-v="config" onclick="go('config')"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 00.3 1.9l.1.1a2 2 0 11-2.8 2.8l-.1-.1a1.7 1.7 0 00-2.9 1.2V22a2 2 0 11-4 0v-.1a1.7 1.7 0 00-2.9-1.2l-.1.1a2 2 0 11-2.8-2.8l.1-.1a1.7 1.7 0 00-1.2-2.9H2a2 2 0 110-4h.1a1.7 1.7 0 001.2-2.9l-.1-.1a2 2 0 112.8-2.8l.1.1a1.7 1.7 0 002.9-1.2V2a2 2 0 114 0v.1a1.7 1.7 0 002.9 1.2l.1-.1a2 2 0 112.8 2.8l-.1.1a1.7 1.7 0 001.2 2.9H22a2 2 0 110 4h-.1a1.7 1.7 0 00-1.5 1z"/></svg>Ajustes</button>
 </nav>
@@ -664,18 +686,19 @@ function renderFacturas(){
     const chip=f.empresa==="SATMEC"?'<span class="chip smc">SATMEC</span>':'<span class="chip sat">SATHIRI</span>';
     const extra = f.alerta==="vencida"? `${Math.abs(f.diasVenc)} d vencida` : f.venc&&f.saldo>0? "vence "+fdate(f.venc):"";
     const emis = f.emis? "emit. "+fdate(f.emis) : "";
+    const retIco = (f.retReal!=null && f.retReal!=="")? '<span class="reticon">✓ ret.</span>' : "";
     const meta = `${f.numero} · ${fmt(f.saldo>0?f.saldo:f.total)}${emis?" · "+emis:""}${extra?" · "+extra:""}`;
     const concepto = f.concepto? `<div class="concepto">${f.proyecto?`<b>[${f.proyecto}]</b> `:""}${f.concepto}</div>` : (f.proyecto?`<div class="concepto"><b>[${f.proyecto}]</b></div>`:"");
     if(selMode){
       return `<div class="row sel" onclick="toggleSel(${JSON.stringify(f.numero)},this)">
         <input type="checkbox" class="f_chk" data-num="${f.numero}" onclick="event.stopPropagation();syncSel()">
-        <div class="main"><div class="name">${chip} ${f.cliente||"—"}</div>
+        <div class="main"><div class="name">${chip} ${f.cliente||"—"} ${retIco}</div>
         ${concepto}
         <div class="meta num">${meta}</div></div>
         <span class="tag ${tc}">${tt}</span></div>`;
     }
     return `<div class="row" onclick='openCobro(${JSON.stringify(f.numero)})'>
-      <div class="main"><div class="name">${chip} ${f.cliente||"—"}</div>
+      <div class="main"><div class="name">${chip} ${f.cliente||"—"} ${retIco}</div>
       ${concepto}
       <div class="meta num">${meta}</div></div>
       <span class="tag ${tc}">${tt}</span></div>`;
@@ -1277,8 +1300,43 @@ document.getElementById("facFilters").addEventListener("click",e=>{
   document.querySelectorAll("#facFilters button").forEach(x=>x.classList.remove("on"));
   b.classList.add("on"); facFilter=b.dataset.f; renderFacturas();
 });
+document.getElementById("retFilters").addEventListener("click",e=>{
+  const b=e.target.closest("button"); if(!b)return;
+  document.querySelectorAll("#retFilters button").forEach(x=>x.classList.remove("on"));
+  b.classList.add("on"); retFilter=b.dataset.rf; renderRetenciones();
+});
 
-function renderAll(){renderKPIs();renderAging();renderProj();renderAnticipos();renderDeudores();renderComis();renderFacturas();}
+function renderAll(){renderKPIs();renderAging();renderProj();renderAnticipos();renderDeudores();renderComis();renderFacturas();renderRetenciones();}
+
+let retFilter="todas";
+function renderRetenciones(){
+  const cont=document.getElementById("retList"); if(!cont)return;
+  const r=rows();   // facturas activas (no anuladas)
+  const tieneReal=f=>f.retReal!=null && f.retReal!=="";
+  let list=r.slice();
+  if(retFilter==="con") list=list.filter(tieneReal);
+  else if(retFilter==="faltan") list=list.filter(f=>!tieneReal(f));
+  list.sort((a,b)=>(b.emis||0)-(a.emis||0));
+
+  // totales arriba
+  const proy=r.reduce((a,f)=>a+(f.retRenta+f.retIva),0);
+  const real=r.reduce((a,f)=>a+(tieneReal(f)?+f.retReal:0),0);
+  const nCon=r.filter(tieneReal).length, nFalta=r.filter(f=>!tieneReal(f)).length;
+  document.getElementById("retMeta").textContent=`${nCon} con retención · ${nFalta} faltan`;
+  document.getElementById("retTotales").innerHTML=
+    `<div class="csrow"><div class="cs-l"><span class="cs-t">Retención proyectada (total)</span><span class="cs-s">renta + IVA estimados</span></div><div class="cs-v num">${fmt(proy)}</div></div>
+     <div class="csrow ok"><div class="cs-l"><span class="cs-t">Retención real registrada</span><span class="cs-s">${nCon} comprobantes</span></div><div class="cs-v num">${fmt(real)}</div></div>`;
+
+  cont.innerHTML = list.length ? list.map(f=>{
+    const real=tieneReal(f);
+    const val = real? fmt(+f.retReal) : fmt(f.retRenta+f.retIva);
+    const tag = real? `<span class="tag ok">✓ ret.</span>` : `<span class="tag pend">falta</span>`;
+    return `<div class="row" onclick='openCobro(${JSON.stringify(f.numero)})'>
+      <div class="main"><div class="name">${f.empresa==="SATMEC"?'<span class="chip smc">SATMEC</span>':'<span class="chip sat">SATHIRI</span>'} ${f.cliente||"—"}</div>
+      <div class="meta num">${f.numero} · ${real?"retenido ":"proyect. "}${val}${real&&f.retNum?" · N° "+f.retNum:""}</div></div>
+      ${tag}</div>`;
+  }).join("") : '<div class="empty">No hay facturas en este filtro.</div>';
+}
 function renderAnticipos(){
   const el=document.getElementById("anticipos"); if(!el)return;
   const items=(DATA.pagos||[]).map(p=>{
