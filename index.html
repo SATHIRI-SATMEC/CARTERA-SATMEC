@@ -269,10 +269,14 @@
 
   /* ---- print / informes ---- */
   #printArea{display:none}
+  #docOverlay{display:none;position:fixed;inset:0;z-index:250;background:#fff;overflow:auto;-webkit-overflow-scrolling:touch}
+  .doc-bar{position:sticky;top:0;display:flex;gap:10px;justify-content:flex-end;align-items:center;padding:10px 14px;background:var(--ink);box-shadow:0 2px 8px rgba(0,0,0,.2)}
+  .doc-body{padding:18px 16px 60px;max-width:820px;margin:0 auto}
   @media print{
-    header,nav,.fab,.view,main{display:none!important}
+    header,nav,.fab,.view,main,#docOverlay .doc-bar{display:none!important}
+    #docOverlay{position:static;overflow:visible;display:block!important}
+    #docOverlay .doc-body{padding:0;max-width:none}
     body{background:#fff;padding:0}
-    #printArea{display:block!important;padding:0}
     @page{margin:14mm}
   }
   .pdoc{color:#1B2430;font-size:12px}
@@ -545,7 +549,8 @@ function calc(f){
   const sub=+f.subtotal||0;
   const iva = f.ivaManual!=null && f.ivaManual!=="" ? +f.ivaManual : +(sub*IVA).toFixed(2);
   const total=+(sub+iva).toFixed(2);
-  const com=+(sub*(+f.comisionPct||0)).toFixed(2);
+  const pct=+f.comisionPct||0;
+  const com=+(sub*(pct/(1+pct))).toFixed(2);   // el subtotal ya incluye la comisión → se extrae con r/(1+r)
   // retenciones
   const retRentaPct = (f.retRentaPct!=null && f.retRentaPct!=="") ? +f.retRentaPct : DEF_RENTA;
   const retIvaPct   = (f.retIvaPct!=null && f.retIvaPct!=="") ? +f.retIvaPct : DEF_IVA;
@@ -1477,7 +1482,19 @@ const MEMBRETE = (titulo,sub)=>`<div class="ph">
   <div class="co">SATMEC PROYECTOS INDUSTRIALES<small>Control de cartera y cobranzas</small></div>
   <div class="ti"><b>${titulo}</b><span>${sub||""}</span><span>Emitido: ${fdate(today())}</span></div></div>`;
 const PFOOT = `<div class="pfoot">Documento generado por el panel de cartera SATMEC. Valores referenciales sujetos a conciliación contable.</div>`;
-function printDoc(html){document.getElementById("printArea").innerHTML=`<div class="pdoc">${html}</div>`;setTimeout(()=>window.print(),60);}
+function printDoc(html){
+  document.getElementById("printArea").innerHTML=`<div class="pdoc">${html}</div>`;
+  let ov=document.getElementById("docOverlay");
+  if(!ov){ ov=document.createElement("div"); ov.id="docOverlay"; document.body.appendChild(ov); }
+  ov.innerHTML=`<div class="doc-bar">
+      <button class="btn ghost sm" style="margin:0" onclick="closeDoc()">‹ Cerrar</button>
+      <button class="btn sm" style="margin:0" onclick="window.print()">Imprimir / Guardar PDF</button>
+    </div>
+    <div class="doc-body"><div class="pdoc">${html}</div></div>`;
+  ov.style.display="block";
+  window.scrollTo(0,0);
+}
+function closeDoc(){ const ov=document.getElementById("docOverlay"); if(ov) ov.style.display="none"; }
 
 // ---------- factura tipo PDF (RIDE) ----------
 function verFacturaPDF(numero){
