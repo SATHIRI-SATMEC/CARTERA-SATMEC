@@ -419,6 +419,7 @@
       <button data-cf="todas">Todas</button>
     </div>
     <button class="btn ghost sm" style="margin:0 0 10px" onclick="aplicarComisionesDefecto()">Asignar comisiones por defecto a las que no tienen</button>
+    <button class="btn ghost sm" style="margin:0 0 10px" onclick="resetComisionesPendientes()">Marcar TODAS como pendientes (corregir errores)</button>
     <div id="comLista"></div>
   </section>
 
@@ -1499,8 +1500,9 @@ let comFilter="pend";
 function comisionesPlano(){
   const out=[];
   rows().forEach(f=>{
-    if(f.vendedor && f.com>0) out.push({numero:f.numero, cliente:f.cliente, proyecto:f.proyecto||"", vendedor:f.vendedor, monto:f.com, cobrada:f.estadoPago==="Pagada", pagada:f.estadoComision==="Pagada", slot:1});
-    if(f.vendedor2 && f.com2>0) out.push({numero:f.numero, cliente:f.cliente, proyecto:f.proyecto||"", vendedor:f.vendedor2, monto:f.com2, cobrada:f.estadoPago==="Pagada", pagada:f.estadoComision2==="Pagada", slot:2});
+    const ref={numero:f.numero, cliente:f.cliente, proyecto:f.proyecto||"", empresa:f.empresa||"", concepto:f.concepto||"", subtotal:+f.subtotal||0, fechaEmision:f.fechaEmision, cobrada:f.estadoPago==="Pagada"};
+    if(f.vendedor && f.com>0) out.push({...ref, vendedor:f.vendedor, monto:f.com, pagada:f.estadoComision==="Pagada", comprobante:f.comprobCom||"", slot:1});
+    if(f.vendedor2 && f.com2>0) out.push({...ref, vendedor:f.vendedor2, monto:f.com2, pagada:f.estadoComision2==="Pagada", comprobante:f.comprobCom2||"", slot:2});
   });
   return out;
 }
@@ -1529,14 +1531,26 @@ function renderComisiones(){
   list.sort((a,b)=>(a.vendedor||"").localeCompare(b.vendedor||"")|| (numKey(b.numero)-numKey(a.numero)));
   cont.innerHTML = list.length ? list.map(c=>{
     const est = c.pagada? `<span class="tag ok">pagada</span>` : (c.cobrada? `<span class="tag warn">por pagar</span>` : `<span class="tag pend">factura sin cobrar</span>`);
-    const accion = !c.pagada && c.cobrada
-      ? `<button class="btn ok sm" style="margin:0" onclick='pagarComision(${JSON.stringify(c.numero)},${c.slot})'>Marcar pagada</button>`
-      : (c.pagada? `<button class="btn ghost sm" style="margin:0" onclick='despagarComision(${JSON.stringify(c.numero)},${c.slot})'>Deshacer</button>`:"");
+    const accion = c.pagada
+      ? `<button class="btn ghost sm" style="margin:0" onclick='despagarComision(${JSON.stringify(c.numero)},${c.slot})'>Deshacer (volver a pendiente)</button>`
+      : `<button class="btn ok sm" style="margin:0" onclick='pagarComision(${JSON.stringify(c.numero)},${c.slot})'>Marcar pagada</button>`;
+    const chip = c.empresa==="SATMEC"?'<span class="chip smc">SATMEC</span>':(c.empresa==="SATHIRI"?'<span class="chip sat">SATHIRI</span>':"");
+    const ref = c.concepto? `<div class="concepto">${c.proyecto?`<b>[${c.proyecto}]</b> `:""}${c.concepto}</div>` : (c.proyecto?`<div class="concepto"><b>[${c.proyecto}]</b></div>`:"");
+    const emit = c.fechaEmision? " · emit. "+fdate(c.fechaEmision) : "";
+    const comprob = c.comprobante
+      ? `<a class="btn ghost sm" style="margin:0" href="${c.comprobante}" target="_blank" rel="noopener">Ver comprobante</a>`
+      : (c.pagada? `<button class="btn ghost sm" style="margin:0" onclick='subirComprobanteCom(${JSON.stringify(c.numero)},${c.slot})'>Subir comprobante</button>`:"");
     return `<div class="card" style="padding:12px 14px;margin-bottom:8px">
       <div style="display:flex;justify-content:space-between;gap:10px;align-items:baseline">
         <div><b>${c.vendedor}</b> · ${fmt(c.monto)} ${est}</div></div>
-      <div class="meta num" style="margin:3px 0 8px">${c.cliente} · ${c.numero}${c.proyecto?" · "+c.proyecto:""}</div>
-      ${accion}</div>`;
+      <div class="name" style="margin-top:4px">${chip} ${c.cliente||"—"}</div>
+      ${ref}
+      <div class="meta num" style="margin:3px 0 8px">Factura ${c.numero} · ${fmt(c.subtotal)}${emit}</div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <button class="btn ghost sm" style="margin:0" onclick='openCobro(${JSON.stringify(c.numero)})'>Ver factura</button>
+        ${comprob}
+        ${accion}
+      </div></div>`;
   }).join("") : '<div class="empty">No hay comisiones en este filtro.</div>';
 }
 function pagarComision(numero,slot){
@@ -1561,6 +1575,59 @@ function despagarComision(numero,slot){
   const f=DATA.facturas.find(x=>x.numero===numero); if(!f)return;
   if(slot===2) f.estadoComision2="Pendiente"; else f.estadoComision="Pendiente";
   push("registrarCobro",f); renderAll();
+}
+function comprimirArchivo(file){
+  return new Promise((resolve,reject)=>{
+    if(!file.type || !file.type.startsWith("image/")){ // PDF u otro: tal cual
+      const r=new FileReader(); r.onload=()=>resolve(r.result); r.onerror=reject; r.readAsDataURL(file); return;
+    }
+    const r=new FileReader();
+    r.onload=()=>{
+      const img=new Image();
+      img.onload=()=>{
+        const max=1400; let w=img.width, h=img.height;
+        if(w>max||h>max){ const s=Math.min(max/w,max/h); w=Math.round(w*s); h=Math.round(h*s); }
+        const cv=document.createElement("canvas"); cv.width=w; cv.height=h;
+        cv.getContext("2d").drawImage(img,0,0,w,h);
+        resolve(cv.toDataURL("image/jpeg",0.7));
+      };
+      img.onerror=reject; img.src=r.result;
+    };
+    r.onerror=reject; r.readAsDataURL(file);
+  });
+}
+function subirComprobanteCom(numero, slot){
+  if(!cfg.url){ alert("Conéctate primero (Ajustes) para poder subir comprobantes."); return; }
+  const inp=document.createElement("input");
+  inp.type="file"; inp.accept="image/*,application/pdf";
+  inp.onchange=async ()=>{
+    const file=inp.files&&inp.files[0]; if(!file)return;
+    const ov=document.createElement("div"); ov.className="confirm-ov";
+    ov.innerHTML='<div class="confirm-box"><div class="confirm-msg">Subiendo comprobante…</div></div>';
+    document.body.appendChild(ov);
+    try{
+      const dataURL=await comprimirArchivo(file);
+      const res=await fetch(cfg.url,{method:"POST",headers:{"Content-Type":"text/plain;charset=utf-8"},
+        body:JSON.stringify({action:"subirComprobante",payload:{base64:dataURL,nombre:"comision_"+String(numero).replace(/\D/g,"")+"_v"+slot}})});
+      const j=await res.json();
+      ov.remove();
+      if(!j||!j.ok||!j.url){ alert("No se pudo subir el comprobante: "+((j&&j.error)||"error")); return; }
+      const f=DATA.facturas.find(x=>x.numero===numero); if(!f)return;
+      if(slot===2){ f.comprobCom2=j.url; f.estadoComision2="Pagada"; } else { f.comprobCom=j.url; f.estadoComision="Pagada"; }
+      push("registrarCobro",f); renderAll();
+      alert("Comprobante subido. La comisión quedó marcada como pagada.");
+    }catch(e){ ov.remove(); alert("Error al subir: "+e.message); }
+  };
+  inp.click();
+}
+function resetComisionesPendientes(){
+  const cambiadas=DATA.facturas.filter(f=>f.estadoComision==="Pagada"||f.estadoComision2==="Pagada");
+  if(!cambiadas.length){ alert("No hay comisiones marcadas como pagadas."); return; }
+  confirmar(`¿Marcar como <b>pendientes</b> las comisiones de ${cambiadas.length} factura(s)?<br><br>No borra nada: solo cambia el estado de pago de la comisión a "pendiente" para que puedas empezar de cero.`, ()=>{
+    cambiadas.forEach(f=>{ f.estadoComision="Pendiente"; f.estadoComision2="Pendiente"; });
+    if(cfg.url) push("upsertFacturasLote",{facturas:cambiadas});
+    renderAll();
+  }, "Sí, marcar pendientes");
 }
 
 let retFilter="todas";
