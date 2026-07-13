@@ -544,6 +544,17 @@ const fdate = d => {
   return String(x.getDate()).padStart(2,"0")+"/"+String(x.getMonth()+1).padStart(2,"0")+"/"+x.getFullYear();
 };
 const addDays=(d,n)=>{const x=new Date(d);x.setDate(x.getDate()+n);return x;};
+// Chaide solo transfiere los viernes: lun-jue → viernes de esa semana; viernes/finde → viernes de la próxima
+function viernesDePago(venc){
+  if(!venc) return null;
+  const d=venc.getDay();           // 0=domingo … 6=sábado
+  let add;
+  if(d>=1 && d<=4) add=5-d;        // lunes a jueves → viernes de la misma semana
+  else if(d===5)   add=7;          // viernes → próxima semana
+  else if(d===6)   add=6;          // sábado → próximo viernes
+  else             add=5;          // domingo → próximo viernes
+  return addDays(venc, add);
+}
 const store={ get(k){try{return localStorage.getItem(k)}catch(e){return null}}, set(k,v){try{localStorage.setItem(k,v)}catch(e){}} };
 
 // ════════ CONFIGURACIÓN DEL EQUIPO ════════
@@ -562,6 +573,8 @@ const COM_VEND1 = "Erika";   const COM_PCT1 = 5;    // % de Erika
 // Si el cliente contiene este texto, se añade un segundo vendedor:
 const COM_REGLA = "CHAIDE";
 const COM_VEND2 = "Eduardo";  const COM_PCT2 = 3;   // % de Eduardo (varía; edítalo por factura cuando cambie)
+// Cliente que SOLO transfiere los viernes (ajusta la fecha real de cobro):
+const CLIENTE_PAGA_VIERNES = "CHAIDE";
 function asignarComisionAuto(f){
   if(!f.vendedor){ f.vendedor=COM_VEND1; f.comisionPct=COM_PCT1/100; }
   if((f.cliente||"").toUpperCase().includes(COM_REGLA) && !f.vendedor2){
@@ -598,6 +611,8 @@ function calc(f){
   const saldo=+(deposito-cobrado).toFixed(2);              // lo que falta que te depositen
   const emis=pd(f.fechaEmision);
   const venc = emis? addDays(emis,+f.diasCredito||0):null;
+  const pagaViernes = (f.cliente||"").toUpperCase().includes(CLIENTE_PAGA_VIERNES);
+  const cobroEsp = (venc && pagaViernes) ? viernesDePago(venc) : venc;   // fecha real esperada de depósito
   const t=today();
   const diasVenc = venc? Math.round((venc-t)/86400000):null;
   let alerta;
@@ -608,7 +623,7 @@ function calc(f){
   else if(venc<=addDays(t,7)) alerta="porvencer";
   else alerta="dia";
   return {...f,sub,iva,total,com,com2,retRentaPct,retIvaPct,retRentaProj,retIvaProj,retProj,
-          retReal,retencion,deposito,cobrado,saldo,emis,venc,diasVenc,alerta};
+          retReal,retencion,deposito,cobrado,saldo,emis,venc,cobroEsp,pagaViernes,diasVenc,alerta};
 }
 const rows = ()=>DATA.facturas.map(calc).filter(f=>f.estadoPago!=="Anulada");
 
@@ -642,7 +657,7 @@ function renderKPIs(){
 
   // --- indicadores de gestión ---
   const vencido=r.filter(f=>f.saldo>0&&f.venc&&f.venc<t).reduce((a,f)=>a+f.saldo,0);
-  const semana=r.filter(f=>f.saldo>0&&f.venc&&f.venc>=t&&f.venc<=addDays(t,7)).reduce((a,f)=>a+f.saldo,0);
+  const semana=r.filter(f=>{const d=f.cobroEsp||f.venc; return f.saldo>0&&d&&d>=t&&d<=addDays(t,7);}).reduce((a,f)=>a+f.saldo,0);
   const comPagar=r.filter(f=>f.estadoPago==="Pagada"&&f.estadoComision!=="Pagada").reduce((a,f)=>a+f.com,0);
   const k=[
     ["Por recibir",fmt0(porRecibir),r.filter(f=>f.saldo>0).length+" facturas","brand"],
@@ -677,10 +692,10 @@ function renderAging(){
 
 // ---------- proyección ----------
 function projData(){
-  const r=rows().filter(f=>f.saldo>0&&f.venc), t=today(), wk=[];
+  const r=rows().filter(f=>f.saldo>0&&(f.cobroEsp||f.venc)), t=today(), wk=[];
   for(let i=0;i<8;i++){
     const a=addDays(t,i*7), b=addDays(a,6);
-    const amt=r.filter(f=>f.venc>=a&&f.venc<=b).reduce((s,f)=>s+f.saldo,0);
+    const amt=r.filter(f=>{const d=f.cobroEsp||f.venc; return d>=a&&d<=b;}).reduce((s,f)=>s+f.saldo,0);
     wk.push({a,b,amt});
   } return wk;
 }
@@ -743,9 +758,10 @@ function renderFacturas(){
     const [tc,tt]=tagMap[f.alerta]||["pend",""];
     const chip=f.empresa==="SATMEC"?'<span class="chip smc">SATMEC</span>':'<span class="chip sat">SATHIRI</span>';
     const extra = f.alerta==="vencida"? `${Math.abs(f.diasVenc)} d vencida` : f.venc&&f.saldo>0? "vence "+fdate(f.venc):"";
+    const pagoV = (f.pagaViernes && f.cobroEsp && f.saldo>0)? ` · 💵 pagan vie ${fdate(f.cobroEsp)}` : "";
     const emis = f.emis? "emit. "+fdate(f.emis) : "";
     const retIco = (f.retReal!=null && f.retReal!=="")? '<span class="reticon">✓ ret.</span>' : "";
-    const meta = `${f.numero} · ${fmt(f.saldo>0?f.saldo:f.total)}${emis?" · "+emis:""}${extra?" · "+extra:""}`;
+    const meta = `${f.numero} · ${fmt(f.saldo>0?f.saldo:f.total)}${emis?" · "+emis:""}${extra?" · "+extra:""}${pagoV}`;
     const concepto = f.concepto? `<div class="concepto">${f.proyecto?`<b>[${f.proyecto}]</b> `:""}${f.concepto}</div>` : (f.proyecto?`<div class="concepto"><b>[${f.proyecto}]</b></div>`:"");
     if(selMode){
       return `<div class="row sel" data-num="${f.numero}">
@@ -923,7 +939,8 @@ function openCobro(numero){
   document.getElementById("modalBody").innerHTML=`
     <div class="row" style="border:0"><div class="main">
       <div class="name">${f.cliente||"—"}</div>
-      <div class="meta">Emitida ${fdate(c.emis)} · Subtotal ${fmt(c.sub)} · IVA ${fmt(c.iva)} · Total ${fmt(c.total)} · vence ${fdate(c.venc)}</div></div></div>
+      <div class="meta">Emitida ${fdate(c.emis)} · Subtotal ${fmt(c.sub)} · IVA ${fmt(c.iva)} · Total ${fmt(c.total)} · vence ${fdate(c.venc)}</div>
+      ${c.pagaViernes&&c.cobroEsp?`<div class="meta" style="color:var(--satmec);font-weight:600">💵 Chaide transfiere los viernes → pago esperado: ${fdate(c.cobroEsp)}</div>`:""}</div></div>
     ${detalle}
     <label class="field"><span class="l">Proyecto / obra</span><input id="c_proy" placeholder="Ej. Piso epóxico bodega 3" value="${(f.proyecto||"").replace(/"/g,'&quot;')}"></label>
     <label class="field"><span class="l">Días de crédito</span><input id="c_dias" type="number" inputmode="numeric" value="${f.diasCredito||0}" oninput="calcVencCobro()"></label>
