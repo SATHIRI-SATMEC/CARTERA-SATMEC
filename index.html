@@ -542,6 +542,7 @@
 </div>
 
 <div id="printArea"></div>
+<datalist id="dlClientes"></datalist>
 
 <script>
 "use strict";
@@ -1529,7 +1530,19 @@ document.getElementById("comFilters").addEventListener("click",e=>{
   b.classList.add("on"); comFilter=b.dataset.cf; renderComisiones();
 });
 
-function renderAll(){renderKPIs();renderAging();renderProj();renderAnticipos();renderDeudores();renderComis();renderFacturas();renderRetenciones();renderComisiones();renderPorFacturar();}
+function renderAll(){actualizarClientes();renderKPIs();renderAging();renderProj();renderAnticipos();renderDeudores();renderComis();renderFacturas();renderRetenciones();renderComisiones();renderPorFacturar();}
+
+// Junta todos los clientes conocidos (registrados + de facturas + pendientes + pagos) para autocompletar
+function actualizarClientes(){
+  const dl=document.getElementById("dlClientes"); if(!dl) return;
+  const set=new Set();
+  (DATA.clientes||[]).forEach(c=>{ const n=(c&&c.nombre)||c; if(n) set.add(String(n).trim()); });
+  (DATA.facturas||[]).forEach(f=>{ if(f.cliente) set.add(String(f.cliente).trim()); });
+  (DATA.porFacturar||[]).forEach(p=>{ if(p.cliente) set.add(String(p.cliente).trim()); });
+  (DATA.pagos||[]).forEach(p=>{ if(p.cliente) set.add(String(p.cliente).trim()); });
+  const nombres=[...set].filter(Boolean).sort((a,b)=>a.localeCompare(b));
+  dl.innerHTML = nombres.map(n=>`<option value="${n.replace(/"/g,'&quot;')}">`).join("");
+}
 
 let pfSearch="";
 let _pfFacturando=null;
@@ -1567,12 +1580,13 @@ function renderPorFacturar(){
   }).join("") : `<div class="empty">${pfSearch?"Sin resultados.":"No hay pendientes por facturar."}</div>`;
 }
 function openPendiente(id){
+  actualizarClientes();
   const ed = id? (DATA.porFacturar||[]).find(p=>p.id===id) : null;
   closeModal();
   document.getElementById("modalTitle").textContent = ed? "Editar pendiente" : "Nuevo pendiente por facturar";
   document.getElementById("modalBody").innerHTML=`
     <input type="hidden" id="pf_id" value="${ed?ed.id:""}">
-    <label class="field"><span class="l">Cliente</span><input id="pf_cli" list="dlC" value="${ed?(ed.cliente||"").replace(/"/g,'&quot;'):""}"></label>
+    <label class="field"><span class="l">Cliente</span><input id="pf_cli" list="dlClientes" value="${ed?(ed.cliente||"").replace(/"/g,'&quot;'):""}" placeholder="Escribe y elige de la lista"></label>
     <label class="field"><span class="l">Proyecto / trabajo</span><input id="pf_proy" value="${ed?(ed.proyecto||"").replace(/"/g,'&quot;'):""}" placeholder="Ej. Piso epóxico bodega 3"></label>
     <label class="field"><span class="l">Monto estimado (opcional)</span><input id="pf_monto" type="number" inputmode="decimal" value="${ed&&ed.montoEstimado?ed.montoEstimado:""}"></label>
     <label class="field"><span class="l">Responsable</span><input id="pf_resp" value="${ed?(ed.responsable||"").replace(/"/g,'&quot;'):""}" placeholder="¿Quién debe facturar?"></label>
